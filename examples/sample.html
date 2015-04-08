@@ -1,0 +1,52 @@
+<html>
+  <script src="../oo.js" type="application/javascript"></script>
+  <script>
+    package("model", function(){
+      this.class(
+        function ConcreteElement(name) {
+          this.abstract = null;
+          this.x = 0;
+          this.y = 0;
+          this.name = name;
+
+          // Inner implementation.
+          function render() {
+            throw new Error("function has not been implemented!");
+          }
+
+          this.render = function() {
+            render();
+          };
+      });
+
+      this.class(
+        function AbstractElement(name) {
+          this.name = name;
+      });
+
+    });
+
+    package("model", function(){
+      var ConcreteBox,
+        AbstractBox;
+
+
+      ConcreteBox =
+      this.inherit( ConcreteElement, function ConcreteBox(name) {
+        this.abstract = new model.AbstractBox(name);
+        type(model.AbstractBox, this.abstract);
+
+        function render() {
+          console.log("woo!");
+        }
+      });
+
+      AbstractBox =
+      this.extend( AbstractElement, function AbstractBox(name) {
+        this.width = 0;
+        this.height = 0;
+      });
+
+    });
+  </script>
+</html>

@@ -203,7 +203,7 @@
         }
       }
 
-      var $pkg = currPkg;
+      // var $pkg = currPkg;
       // Create the scope
       eval(scope_def);
       return eval("(" + func + ")");
@@ -244,9 +244,9 @@
           scope_def += "var " + ids[j] + "=" + classes[j].toString() + ";";
         }
 
-        scope_def += "this.class=" + currPkg.class.toString() + ";";
-        scope_def += "this.extend=" + currPkg.extend.toString() + ";";
-        scope_def += "this.inherit=" + currPkg.inherit.toString() + ";";
+        // scope_def += "this.class=" + currPkg.class.toString() + ";";
+        // scope_def += "this.extend=" + currPkg.extend.toString() + ";";
+        // scope_def += "this.inherit=" + currPkg.inherit.toString() + ";";
       }
 
       // Create the scope
