@@ -2,8 +2,7 @@
 // Statecharts!
 //////////////////////////////////////////////////////////////
 package( "oo.statechart")
-  .class( "Statechart",
-    function(name) {
+  .class( function Statechart(name) {
       include(
       "oo.statechart.state",
       "oo.statechart.transition",
@@ -51,6 +50,8 @@ package( "oo.statechart")
           };
 
           this.fire = function(event, data) {
+            console.log("Firing: " + event);
+
             macrosteps.push(event);
             if(!running) {
               while(macrosteps.length > 0) {
@@ -67,15 +68,14 @@ package( "oo.statechart")
     });
 
 package("oo.statechart.state")
-  .class( "AbstractState",
-    function(){
+.class(function AbstractState(){
       this.name = undefined;
 
       this.enter = function(){};
       this.exit = function(){};
     })
-  .class( "BasicState", "AbstractState",
-    function(name){
+.class("AbstractState",
+    function BasicState(name){
       var incomingPaths = {},
         outgoingPaths = {};
 
@@ -106,8 +106,8 @@ package("oo.statechart.state")
       };
 
     })
-  .class( "CompositeState", "BasicState",
-    function(name) {
+.class("BasicState",
+    function CompositeState(name) {
       var states = {},
         initialState,
         currentState;
@@ -141,8 +141,7 @@ package("oo.statechart.state")
     });
 
 package("oo.statechart.transition")
-  .class( "Transition",
-    function(events, from, to, triggers, guard){
+.class( function Transition(events, from, to, triggers, guard){
       /////////////////////////////
       // private :)
       /////////////////////////////
@@ -211,22 +210,123 @@ package("oo.statechart.transition")
       this.setFrom(from);
       this.setTo(to);
 
-  })
-  .class( "ActiveTransition",
-  inherit(oo.statechart.transition.Transition,
-    function(event, from, to, triggers, guard, perform){
+  });
+// .class(
+//   inherit(oo.statechart.transition.Transition,
+//   function ActiveTransition(event, from, to, triggers, guard, perform){
+//
+//     // Directly override the internal scope of
+//     // version of step in Transition :o
+//     function step() {
+//       this.from.exit();
+//       // Boom. We now have a transition that can perform an event
+//       if(perform)
+//         perform();
+//       this.to.enter();
+//     }
+//
+// }));
+
+// Package declaration within the required scope
+// TODO: consider this, it seems a little cleaner
+// require("oo.statechart.state",
+//   function(){
+//     debugger;
+//     this.class(
+//       extend(BasicState,
+//       function ElseState(name){
+//
+//       }));
+//   });
+//
+//
+// Okay, evaluation #2:
+// -- package( id ) - creates/gets package
+// -- package( id, func ) - creates/gets package, executes in the current scope
+
+// "Classic" package declaration
+package("oo.statechart.state", function() {
+
+  this.class(
+    function BasicState(name){
+      var incomingPaths = {},
+        outgoingPaths = {};
+
+
+      this.addIncoming = function(path) {
+        incomingPaths[path.events] = path;
+      };
+
+      this.addOutgoing = function(path) {
+        outgoingPaths[path.events] = path;
+      };
+
+      this.enter = function(){
+      };
+
+      this.exit = function(){
+      };
+
+      this.getIncoming = function() {
+        return incomingPaths;
+      };
+
+      this.getName = function() {
+        return name;
+      };
+
+      this.getOutgoing = function() {
+        return outgoingPaths;
+      };
+
+      this.removeIncoming = function(state) {
+        delete incomingPaths[state.name];
+      };
+
+      this.removeOutgoing = function(state) {
+        delete outgoingPaths[state.name];
+      };
+
+    });
+
+});
+
+package("oo.statechart.state", function() {
+
+  this.extend(
+    BasicState,
+    function IfState(name) {
+
+      // Enter the state
+      this.enter = function() {
+        // Evaluate all transitions in order until a match
+        // is found and then fire that
+      };
+
+  });
+
+});
+
+package("oo.statechart.transition", function() {
+
+  this.inherit(
+    Transition,
+    function ActiveTransition(event, from, to, triggers, guard, perform){
 
       // Directly override the internal scope of
-      // version of step in Transition :o
+      // version of step in Transition :O
       function step() {
         this.from.exit();
         // Boom. We now have a transition that can perform an event
         if(perform)
           perform();
+          
         this.to.enter();
       }
 
-  }));
+    });
+
+});
 
 // Now do something!
 require(
@@ -248,5 +348,9 @@ require(
     t1 = new Transition("a", b1, b2, ["b", "c"]);
     t2 = new Transition("b", b2, b1, ["c"]);
 
-    window.sc = sc;
+    console.log( "Current state: " + sc.current().name);
+    sc.fire("a");
+    console.log( "Current state: " + sc.current().name);
+    sc.fire("b");
+    console.log( "Current state: " + sc.current().name);
   });

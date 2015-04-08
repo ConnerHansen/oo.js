@@ -1,27 +1,45 @@
 (function(safe){
   if(safe)
-    oo = {};
+    oo = window.oo || {};
   else
     oo = window;
 
-  var Class = oo.Class || function() {var $this = {};};
+  Class = oo.Class || function() {var $this = {};};
 
-  var Package = oo.Class || function() {
-    this._classes = [];
-    this._ids = [];
+  Package = oo.Package || function() {
+    // this._classes = [];
+    // this._ids = [];
 
-    this.class = function(id, extension, def) {
+    this.getClasses = function() {
+      var scope = this,
+        classes = Object.keys(this).filter(function(entry){
+          return entry.match(/^[A-Z]/);
+        });
+
+      return [
+        classes,
+        classes.map(function(entry){
+          return scope[entry];
+        })];
+    };
+
+    this.class = function(extension, def) {
       // call with:
-      // id -- returns the class
-      // id, extension -- creates a basic class, using extension of def
+      // def -- returns an extension of class, but MAKE SURE YOU USE A NAMED FUNCTION >:(
+      // [id | class]+, def -- creates a basic extension of class
       // id, extension, def -- creates an extension of extension using def
 
-      if(extension == undefined && def == undefined)
-        return this[id];
-      else if(typeof extension == "string" && def != undefined) {
-        var index = this._ids.indexOf(extension);
-        extension = this._classes[index];
-      }
+      // if(typeof id == "function") {
+      //   def = id;
+      // } else {
+        // if(extension == undefined && def == undefined)
+        //   return this[id];
+        if(typeof extension == "string" && def != undefined) {
+          // var index = this._ids.indexOf(extension);
+          // extension = this._classes[index];
+          extension = this[extension];
+        }
+      // }
 
       // if we have an extension definition, but no definition,
       // then we're using the two param version of class()
@@ -29,19 +47,43 @@
         def = extension;
         extension = undefined;
       }
+      var id = def.name;
 
       if(extension)
         def = extend(extension, def);
       else
         def = extend(Class, def);
 
-      this._ids.push(id);
-      this._classes.push(def);
+      // this._ids.push(id);
+      // this._classes.push(def);
       this[id] = def;
 
       // Now return the package -- this allows for classes to be chained
       return this;
     };
+
+    this.extend = function(clss, def) {
+      if(typeof clss == "string" && def != undefined) {
+        clss = this[clss];
+      }
+
+      def = oo.extend.call(this, clss, def);
+      this[def.name] = def;
+
+      return this;
+    };
+
+    this.inherit = function(clss, def) {
+      if(typeof clss == "string" && def != undefined) {
+        clss = this[clss];
+      }
+
+      def = oo.inherit.call(this, clss, def);
+      this[def.name] = def;
+
+      return this;
+    };
+
   };
 
   oo.inherit = function(clss, def) {
@@ -100,7 +142,8 @@
     return eval("(" + assembledScope + "})");
   };
 
-  oo.package = function(ids) {
+  oo.package = function(id, func) {
+    var ids = id;
     if(typeof ids == "string")
       ids = ids.split(".");
 
@@ -111,6 +154,23 @@
         currPkg[ids[i]] = new Package();
       }
       currPkg = currPkg[ids[i]];
+    }
+
+    if(func) {
+      var details = currPkg.getClasses(),
+        ids = details[0],
+        classes = details[1],
+        scopeDef = "";
+
+      for(var j=0; j<classes.length; ++j) {
+        scopeDef += "var " + ids[j] + "=" + classes[j].toString() + ";";
+      }
+
+      scopeDef += "var package=" + oo.package.toString() + ";";
+
+      // Create the scope
+      eval(scopeDef);
+      eval("(" + func.toString() + ")").apply(currPkg);
     }
 
     return currPkg;
@@ -133,13 +193,17 @@
     if(_args.length > 0) {
       var scope_def = "";
       for(var i=0; i<_args.length; ++i) {
-        var pkg = package(_args[i]);
+        var currPkg = package(_args[i]).getClasses(),
+          ids = currPkg[0],
+          classes = currPkg[1];
+        // var pkg = package.getClasses();
 
-        for(var j=0; j<pkg._classes.length; ++j) {
-          scope_def += "var " + pkg._ids[j] + "=" + pkg._classes[j].toString() + ";";
+        for(var j=0; j<classes.length; ++j) {
+          scope_def += "var " + ids[j] + "=" + classes[j].toString() + ";";
         }
       }
 
+      var $pkg = currPkg;
       // Create the scope
       eval(scope_def);
       return eval("(" + func + ")");
@@ -166,11 +230,23 @@
     if(_args.length > 0) {
       var scope_def = "";
       for(var i=0; i<_args.length; ++i) {
-        var pkg = package(_args[i]);
+        // var pkg = package(_args[i]);
+        // var ids, classes = package.getClasses();
+        var currPkg = package(_args[i]),
+          details = currPkg.getClasses(),
+          ids = details[0],
+          classes = details[1];
+        // var currPkg = package(_args[i]),
+        //   ids = Object.keys(pkg),
+        //   classes = ids.map(function(id){ return pkg[id] });
 
-        for(var j=0; j<pkg._classes.length; ++j) {
-          scope_def += "var " + pkg._ids[j] + "=" + pkg._classes[j].toString() + ";";
+        for(var j=0; j<classes.length; ++j) {
+          scope_def += "var " + ids[j] + "=" + classes[j].toString() + ";";
         }
+
+        scope_def += "this.class=" + currPkg.class.toString() + ";";
+        scope_def += "this.extend=" + currPkg.extend.toString() + ";";
+        scope_def += "this.inherit=" + currPkg.inherit.toString() + ";";
       }
 
       // Create the scope
@@ -181,4 +257,16 @@
       return func.apply(this);
     }
   };
+
+  oo.type = function(type, obj) {
+    var err = false;
+    if(typeof obj == "function")
+      err = obj.constructor === type;
+    else
+      err = (typeof obj == type)
+
+    if(err)
+      throw new Error("Type enforcement failed");
+  };
+
 })();
