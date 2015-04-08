@@ -166,8 +166,6 @@
         scopeDef += "var " + ids[j] + "=" + classes[j].toString() + ";";
       }
 
-      scopeDef += "var package=" + oo.package.toString() + ";";
-
       // Create the scope
       eval(scopeDef);
       eval("(" + func.toString() + ")").apply(currPkg);
@@ -191,15 +189,20 @@
     func = _args.pop();
 
     if(_args.length > 0) {
-      var scope_def = "";
-      for(var i=0; i<_args.length; ++i) {
-        var currPkg = package(_args[i]).getClasses(),
-          ids = currPkg[0],
-          classes = currPkg[1];
-        // var pkg = package.getClasses();
+      if(typeof _args[0] == "object")
+        scope = _args.shift();
 
-        for(var j=0; j<classes.length; ++j) {
-          scope_def += "var " + ids[j] + "=" + classes[j].toString() + ";";
+      if(_args.length > 0) {
+        var scope_def = "";
+        for(var i=0; i<_args.length; ++i) {
+          var currPkg = package(_args[i]).getClasses(),
+            ids = currPkg[0],
+            classes = currPkg[1];
+          // var pkg = package.getClasses();
+
+          for(var j=0; j<classes.length; ++j) {
+            scope_def += "var " + ids[j] + "=" + classes[j].toString() + ";";
+          }
         }
       }
 
@@ -214,11 +217,12 @@
   }
 
   oo.require = function(args, func) {
-    if(typeof args != "string")
-      throw new Error("Require must have at least one package passed in");
+    if(args == undefined || func == undefined)
+      throw new Error("Require must have at least one package passed in and be given a function to execute");
 
     // Correct for the documentation...
-    var _args = [];
+    var _args = [],
+      _scope = this;
 
     for(var i=0; i<arguments.length; ++i){
       _args.push(arguments[i]);
@@ -228,25 +232,20 @@
     func = _args.pop();
 
     if(_args.length > 0) {
+      // We can also pass in the scope
+      if(typeof _args[0] == "object")
+        scope = _args.shift();
+
       var scope_def = "";
       for(var i=0; i<_args.length; ++i) {
-        // var pkg = package(_args[i]);
-        // var ids, classes = package.getClasses();
         var currPkg = package(_args[i]),
           details = currPkg.getClasses(),
           ids = details[0],
           classes = details[1];
-        // var currPkg = package(_args[i]),
-        //   ids = Object.keys(pkg),
-        //   classes = ids.map(function(id){ return pkg[id] });
 
         for(var j=0; j<classes.length; ++j) {
           scope_def += "var " + ids[j] + "=" + classes[j].toString() + ";";
         }
-
-        // scope_def += "this.class=" + currPkg.class.toString() + ";";
-        // scope_def += "this.extend=" + currPkg.extend.toString() + ";";
-        // scope_def += "this.inherit=" + currPkg.inherit.toString() + ";";
       }
 
       // Create the scope
@@ -260,10 +259,10 @@
 
   oo.type = function(type, obj) {
     var err = false;
-    if(typeof obj == "function")
-      err = obj.constructor === type;
+    if(typeof obj == "object")
+      err = obj.constructor != type;
     else
-      err = (typeof obj == type)
+      err = (typeof obj != type)
 
     if(err)
       throw new Error("Type enforcement failed");
