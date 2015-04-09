@@ -1,62 +1,23 @@
 <html>
-  <script src="../oo.js" type="application/javascript"></script>
+  <style>
+    body {
+      -moz-user-select     : none;
+      -khtml-user-select   : none;
+      -webkit-user-select  : none;
+      -o-user-select       : none;
+      user-select          : none;
+    }
+  </style>
   <script>
-    package("model", function(){
-      // Concrete element
-      this.class(
-        function ConcreteElement(name) {
-          this.abstract = null;
-          this.x = 0;
-          this.y = 0;
-          this.name = name;
-
-          // Inner implementation.
-          function render() {
-            throw new Error("function has not been implemented!");
-          }
-
-          this.render = function() {
-            render();
-          };
-      });
-
-      // Abstract element!
-      this.class(
-        function AbstractElement(name) {
-          this.name = name;
-      });
-
-    });
-
-    package("model", function(){
-      // Inherit ConcreteElement and modify its private scope
-      this.inherit( ConcreteElement,
-        function ConcreteBox(name, abstract) {
-          // I need to figure out a better way to scope this.
-          this.abstract = abstract || new model.AbstractBox(name);
-
-          function render() {
-            console.log("woo!");
-          }
-
-          type(model.AbstractBox, this.abstract);
-      });
-
-      // Extend AbstractElement -- we're only adding
-      this.extend( AbstractElement,
-        function AbstractBox(name) {
-          this.width = 0;
-          this.height = 0;
-      });
-
-    });
-
-    // Now execute a block!
-    require("model", function(){
-      box1 = new ConcreteBox("Test Box!");
-
-      // Watch, we overrode the private scope!
-      box1.render();
-    });
   </script>
+  <body>
+    <div id="draggable" style="position: absolute; width: 100px; height: 100px; border: 1px solid black; box-shadow: 5px 5px 5px rgba(0,0,0,0.2);">
+
+    </div>
+    <div id="mouse" style="position: absolute; width: 20px; height: 20px; border: 1px solid black; box-shadow: 5px 5px 5px rgba(0,0,0,0.2); background-color: red;">
+
+    </div>
+  </body>
+  <script src="../oo.js" type="application/javascript"></script>
+  <script src="statechart.js" type="application/javascript"></script>
 </html>
