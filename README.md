@@ -18,6 +18,13 @@ Yet another object oriented JS library. This implementation of Object Oriented d
   - _type_ - string or object definition of the type to require an object to be. This does not yet support inheritance or extension.
   - _obj_ - the object to test.
 
+### Inheritance vs Extension in oo.js
+Inheritance can be thought of as meaning "I am _x_, but with fundamental differences." While extension can be thought of as "I am fundamentally _x_, but with additions." Here's a quick reference image to give an explanation of the difference between the two in oo.js:
+
+![Blergh vs Blargh](https://raw.githubusercontent.com/ConnerHansen/oo.js/master/oo.js%20philosophy.png)
+
+In the extension block, we can see that the root scope and added scope are isolated from each other. They share the protected ($this) and public (this) scopes for the class, but do not share the private scope. In the inheritance block, we can see that the root scope and added scope are ultimately merged together. They share all three scopes: public (this), protected ($this), and private (var and function definitions). 
+
 ## package
 The package function provides a simple way to declare/access a package and its classes. We also provide internal class, extend, and inherit functions for convenience in order to maintain package scopes.
 
@@ -29,6 +36,7 @@ package("org.example.animal", function(){
   /// Animal provides a basic framework for other
   /// critter types
   this.class(function Animal(name){
+    // Private scope!
     var type,
       move;
     
