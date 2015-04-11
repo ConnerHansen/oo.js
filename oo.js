@@ -7,8 +7,11 @@
   Class = oo.Class || function() {var $this = {};};
 
   Package = oo.Package || function() {
-    // this._classes = [];
-    // this._ids = [];
+    var define,
+      extend,
+      package,
+      inherit,
+      self = this;
 
     this.getClasses = function() {
       var scope = this,
@@ -23,7 +26,12 @@
         })];
     };
 
-    this.class = function(extension, def) {
+    // Create redirecting private variables. Wat.
+    define = function(extension, def) {
+      self.define(extension, def);
+    };
+
+    this.define = function(extension, def) {
       // call with:
       // def -- returns an extension of class, but MAKE SURE YOU USE A NAMED FUNCTION >:(
       // [id | class]+, def -- creates a basic extension of class
@@ -50,9 +58,9 @@
       var id = def.name;
 
       if(extension)
-        def = extend(extension, def);
+        def = this.extend(extension, def);
       else
-        def = extend(Class, def);
+        def = this.extend(Class, def);
 
       // this._ids.push(id);
       // this._classes.push(def);
@@ -62,15 +70,64 @@
       return this;
     };
 
-    this.extend = function(clss, def) {
-      if(typeof clss == "string" && def != undefined) {
-        clss = this[clss];
+    // Create redirecting private variables. Wat.
+    package = function() {
+      if(arguments.length == 1)
+        oo.package.call(self, arguments[0]);
+      else if(arguments.length == 2)
+        oo.package.call(self, arguments[0], arguments[1]);
+      else if(arguments.length == 3)
+        oo.package.call(self, arguments[0], arguments[1], arguments[3]);
+    };
+
+    this.package = function(id, func) {
+      // return oo.package(this, id, func);
+      var details = this.getClasses(),
+        ids = details[0],
+        classes = details[1],
+        scopeDef = "";
+
+      for(var j=0; j<classes.length; ++j) {
+        scopeDef += "var " + ids[j] + "=" + classes[j].toString() + ";";
       }
 
-      def = oo.extend.call(this, clss, def);
-      this[def.name] = def;
+      eval(scopeDef);
+      eval("(" + func.toString() + ")").apply(this);
+    };
 
-      return this;
+    // Create redirecting private variables. Wat.
+    extend = function(clss, def) {
+      self.extend(clss, def);
+    };
+
+    this.extend = function(clss, def) {
+      var start = clss.toString(),
+        tail = def.toString();
+
+      // Get the new function's header
+      var header = tail.match(/^function[\w\s\(\),]+\{/)[0];
+
+      // Strip the header and footer from the extended scope
+      start = start
+        .replace(/^function[\w\s\(\),]+\{/, "")
+        .replace(/\}$/, "");
+
+      // Now remove the header
+      tail = "function(){" + tail.replace(header, "");
+
+      // Strip off the inherited class's function header and footer,
+      // and replace with the new header
+      tail = tail.replace( start, "");
+      start = header + "\n" + start + "\n";
+
+      // Now assemble the new scope!
+      var assembledScope = start + "\n(" + tail + ").apply(this);";
+      return this[def.name] = eval("(" + assembledScope + "})");
+    };
+
+    // Create redirecting private variables. Wat.
+    inherit = function(clss, def) {
+      self.inherit(clss, def);
     };
 
     this.inherit = function(clss, def) {
@@ -117,37 +174,25 @@
     return eval("(" + assembledScope + "})");
   };
 
-  oo.extend = function(clss, def) {
-    var start = clss.toString(),
-      tail = def.toString();
-
-    // Get the new function's header
-    var header = tail.match(/^function[\w\s\(\),]+\{/)[0];
-
-    // Strip the header and footer from the extended scope
-    start = start
-      .replace(/^function[\w\s\(\),]+\{/, "")
-      .replace(/\}$/, "");
-
-    // Now remove the header
-    tail = "function(){" + tail.replace(header, "");
-
-    // Strip off the inherited class's function header and footer,
-    // and replace with the new header
-    tail = tail.replace( start, "");
-    start = header + "\n" + start + "\n";
-
-    // Now assemble the new scope!
-    var assembledScope = start + "\n(" + tail + ").apply(this);";
-    return eval("(" + assembledScope + "})");
-  };
+  // TODO look into fixing this...
+  // oo.extend = function(clss, def) {
+  //
+  // };
 
   oo.package = function(id, func) {
+    var currPkg = this,
+      calledFrom = this;
+
+    if(arguments.length == 3) {
+      calledFrom = arguments[0];
+      id = arguments[1];
+      func = arguments[2];
+    }
+
     var ids = id;
     if(typeof ids == "string")
       ids = ids.split(".");
 
-    var currPkg = window;
 
     for(var i=0; i<ids.length; ++i) {
       if(!currPkg[ids[i]]) {
@@ -157,18 +202,7 @@
     }
 
     if(func) {
-      var details = currPkg.getClasses(),
-        ids = details[0],
-        classes = details[1],
-        scopeDef = "";
-
-      for(var j=0; j<classes.length; ++j) {
-        scopeDef += "var " + ids[j] + "=" + classes[j].toString() + ";";
-      }
-
-      // Create the scope
-      eval(scopeDef);
-      eval("(" + func.toString() + ")").apply(currPkg);
+      currPkg.package(ids, func);
     }
 
     return currPkg;
@@ -268,4 +302,8 @@
       throw new Error("Type enforcement failed");
   };
 
-})();
+})(false);
+
+package = oo.package;
+extend = oo.extend;
+inherit = oo.inherit;

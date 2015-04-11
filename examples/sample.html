@@ -1,4 +1,5 @@
 <html>
+<head>
   <style>
     body {
       -moz-user-select     : none;
@@ -10,6 +11,7 @@
   </style>
   <script>
   </script>
+</head>
   <body>
     <div id="draggable" style="position: absolute; width: 100px; height: 100px; border: 1px solid black; box-shadow: 5px 5px 5px rgba(0,0,0,0.2);">
 
@@ -20,4 +22,75 @@
   </body>
   <script src="../oo.js" type="application/javascript"></script>
   <script src="statechart.js" type="application/javascript"></script>
+  <script>
+  // Now do something!
+  require(
+  "core.statechart",
+  "core.statechart.state",
+  "core.statechart.transition",
+  "core.statechart.events",
+    function() {
+      // Create a basic statechart
+      var sc = new Statechart( "Sample Statechart" ),
+        startState = new BasicState("Initialize"),
+        waitState = new BasicState("Wait State"),
+        choice = new IfState("Choice"),
+        mouseFollow = new IfState("Mouse Follow"),
+
+        mouseDown = new BasicState("Mouse Down"),
+        mouseDragging = new BasicState("Mouse Dragging"),
+        mouseFollowing = new BasicState("Mouse Following"),
+
+        doneInitializing = new Transition(undefined, startState, waitState),
+
+        eventMouseFollow = new Transition("mouse_move", waitState, mouseFollow),
+        eventMouseFollowReturn = new Transition(undefined, mouseFollow, waitState),
+
+        eventMouseDown = new Transition("left_down", waitState, mouseDown),
+        eventMouseDragging = new Transition("left_move", mouseDown, mouseDragging),
+        eventMouseContDragging = new Transition("left_move", mouseDragging, mouseDragging),
+        eventMDReleased = new Transition("left_up", mouseDragging, waitState);
+        eventMDReleased2 = new Transition("mouse_move", mouseDragging, waitState);
+
+      var body = document.getElementsByTagName("body")[0],
+        draggableDiv = document.getElementById("draggable"),
+        mouseDiv = document.getElementById("mouse");
+
+      // Recycle the mouse event -- class creation is still expensive
+      var mouseEvent = new MouseEvent();
+
+      mouseDragging.enter = function(event, data) {
+        draggableDiv.style["left"] = data.x + "px";
+        draggableDiv.style["top"] = data.y + "px";
+      };
+
+      mouseFollow.enter = function(event, data) {
+        mouseDiv.style["left"] = data.x + "px";
+        mouseDiv.style["top"] = data.y + "px";
+      };
+
+      body.onmousemove = function(event) {
+        mouseEvent.setEvent(event);
+        sc.fire(mouseEvent.trigger(), event);
+      };
+
+      body.onmousedown = function(event) {
+        mouseEvent.setEvent(event);
+        sc.fire(mouseEvent.trigger(), event);
+      };
+
+      body.onmouseup = function(event) {
+        mouseEvent.setEvent(event);
+        sc.fire(mouseEvent.trigger(), event);
+      };
+
+      body.onmousewheel = function(event) {
+        var mouseEvent = new MouseEvent(event);
+        sc.fire(mouseEvent.trigger(), event);
+      };
+
+      sc.root().setInitial(startState);
+      sc.fire();
+    });
+  </script>
 </html>
