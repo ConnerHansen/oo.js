@@ -35,7 +35,7 @@ package("org.example.animal", function(){
   
   /// Animal provides a basic framework for other
   /// critter types
-  this.class(function Animal(name){
+  define(function Animal(name){
     // Private scope!
     var type,
       move;
@@ -70,7 +70,7 @@ package("org.example.animal", function(){
   
   /// Animal provides a basic framework for other
   /// critter types
-  this.class(function Animal(name){
+  define(function Animal(name){
     var type,
       move;
     
@@ -89,7 +89,7 @@ package("org.example.animal", function(){
   });
   
   /// Dog inherits Animal because a dog is an animal
-  this.inherit(
+  inherit(
     this.Animal,
     function Dog(name) {
       move = "walk";
@@ -115,7 +115,7 @@ package("org.example.animal", function(){
   
   /// Animal provides a basic framework for other
   /// critter types
-  this.class(function Animal(name){
+  define(function Animal(name){
     var type,
       move;
     
@@ -134,7 +134,7 @@ package("org.example.animal", function(){
   });
 
   /// Dog inherits Animal because a dog is an animal
-  this.inherit(
+  inherit(
     this.Animal,
     function Dog(name) {
       move = "walk";
@@ -148,7 +148,7 @@ package("org.example.animal", function(){
     });
   
   /// Bloodhound extends Dog because a bloodhound is a dog
-  this.extend(
+  extend(
     this.Dog,
     function Bloodhound(name) {
       
