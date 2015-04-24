@@ -1,11 +1,120 @@
+
+//////////////////////////////////////////////////////////////
+// Statechart Events
+//////////////////////////////////////////////////////////////
+package( "core.statechart.events", function() {
+
+  /**
+   * Defines the base StatechartEvent object. The ScEvent is a wrapper for
+   * an event and some data
+   *
+   * @param event - the trigger that should be fired
+   * @param data - the event data to pass into the statechart
+   */
+  define(
+    function ScEvent(event, data){
+      var _event = event,
+        _data = data;
+
+      self.getData = function() {
+        return _data;
+      };
+
+      self.getEvent = function() {
+        return _event;
+      };
+
+      self.setData = function(data) {
+        _data = data;
+      };
+
+      self.setEvent = function(event) {
+        _event = event;
+      };
+  });
+
+  /**
+   * Provices a wrapper for mouse events. Maps generic mouse event data to
+   * events usable by the statechart
+   *
+   * Extends ScEvent
+   */
+  extend(
+    this.ScEvent,
+    function MouseEvent(event, data) {
+      var button,
+        type,
+        eventString;
+
+      function getButton() {
+        var which = "",
+          data = self.getData();
+
+        console.log(data);
+        if(data)
+          switch(data.which) {
+            case 1:
+              which = "left"
+              break;
+            case 2:
+              which = "middle"
+              break;
+            case 3:
+              which = "right"
+              break;
+            default:
+              which = "mouse";
+          }
+
+        return which;
+      };
+
+      function getEventType() {
+        var data = self.getData();
+
+        console.log(data);
+        if(data)
+          return data.type.replace(/mouse/, "");
+        else
+          return "";
+      };
+
+      self.trigger = function() {
+        var event = self.getEvent();
+
+        if(event)
+          return getButton() + "_" + getEventType();
+        else
+          return undefined;
+      };
+
+      ////////////////////////////////////
+      // Constructor
+      ////////////////////////////////////
+      self.setData(data);
+      self.setEvent(event);
+    });
+
+});
+
 //////////////////////////////////////////////////////////////
 // Statecharts!
 //////////////////////////////////////////////////////////////
+// TODO fix the require scope...
+require("core.statechart.events", function(){
 package( "core.statechart", function() {
 
-  /// Statechart is capable of executing its own set of states.
+  /**
+   * Wrapper for a statechart. This initializes with a root composite state
+   * (ie an OR-state) by default
+   *
+   * @param name - the name of the statechart
+   */
   define(
     function Statechart(name) {
+      ////////////////////////////////////
+      // Private
+      ////////////////////////////////////
       var current,
         macrosteps = [],
         microsteps = [],
@@ -14,100 +123,103 @@ package( "core.statechart", function() {
         root = new core.statechart.state.CompositeState("_root"),
         running = false;
 
-      ////////////////////////////////////
-      // Private!
-      ////////////////////////////////////
-      function fireMicro(event, data) {
-        microsteps.push([event, data]);
+      function fireMicro(evt) {
+        microsteps.push(evt);
 
         if(!running) {
           running = true;
 
           while(microsteps.length > 0) {
             var activeTransitions = root.getCurrent().getOutgoing(),
-              ms = microsteps.shift(),
-              event = ms[0],
-              data = ms[1];
+              step = microsteps.shift();
 
-            var t = activeTransitions[event];
+            var t = activeTransitions[step.getEvent()];
             if(t) {
-              if(t.test(event, data))
-                root.setCurrent(t.fire(event, data));
+              if(t.test(step.getEvent(), step.getData()))
+                root.setCurrent(t.fire(step.getEvent(), step.getData()));
             }
           }
 
           running = false;
         }
-      }
+      };
 
       ////////////////////////////////////
-      // Pubic!
+      // Pubic
       ////////////////////////////////////
-      this.current = function() {
+      self.current = function() {
         return root.getCurrent();
       };
 
-      this.fire = function(event, data) {
-        // console.log("Firing: " + event);
+      self.fire = function(evt, data) {
+        var event = new core.statechart.events.MouseEvent(evt, data);
 
-        macrosteps.push([event, data]);
+        macrosteps.push(event);
         if(!running) {
           while(macrosteps.length > 0) {
-            var ms = macrosteps.shift();
-            fireMicro(ms[0], ms[1]);
+            var step = macrosteps.shift();
+            fireMicro(step);
           }
 
-          fireMicro();
+          fireMicro(new core.statechart.events.MouseEvent(undefined, undefined));
         }
       };
 
-      this.root = function() {
+      self.root = function() {
         return root;
       };
 
     });
 
   package("state", function() {
-    /// BasicState and adds incoming and outgoing transitions
+
+    /**
+     * A base state, capable of enter and exit actions.
+     */
     define(
       function BasicState(name){
 
         var incomingPaths = {},
           outgoingPaths = {};
 
-        this.name = name;
+        self.name = name;
 
-        this.addIncoming = function(path) {
+        self.addIncoming = function(path) {
           incomingPaths[path.events[0]] = path;
         };
 
-        this.addOutgoing = function(path) {
+        self.addOutgoing = function(path) {
           outgoingPaths[path.events[0]] = path;
         };
 
-        this.enter = function(event, data){};
+        self.enter = function(event, data){};
 
-        this.exit = function(event, data){};
+        self.exit = function(event, data){};
 
-        this.getIncoming = function() {
+        self.getIncoming = function() {
           return incomingPaths;
         };
 
-        this.getOutgoing = function() {
+        self.getOutgoing = function() {
           return outgoingPaths;
         };
 
-        this.removeIncoming = function(state) {
+        self.removeIncoming = function(state) {
           delete incomingPaths[state.name];
         };
 
-        this.removeOutgoing = function(state) {
+        self.removeOutgoing = function(state) {
           delete outgoingPaths[state.name];
         };
 
       });
 
-    /// CompositeState extends BasicState and adds the ability to track internal states.
+    /**
+     * Composite states are OR-states, these are states that
+     * contain inner states.
+     *
+     * TODO: top down or bottom up? What kind of SC is this...
+     */
     extend(
       this.BasicState,
       function CompositeState(name) {
@@ -116,29 +228,29 @@ package( "core.statechart", function() {
           initialState,
           currentState;
 
-        this.addState = function(state) {
+        self.addState = function(state) {
           states[state.id] = state;
         };
 
-        this.getCurrent = function() {
+        self.getCurrent = function() {
           return currentState;
         };
 
-        this.getInitial = function() {
+        self.getInitial = function() {
           return initialState;
         }
 
-        this.removeState = function(state) {
+        self.removeState = function(state) {
           return delete states[state.id];
         };
 
-        this.setCurrent = function(state) {
+        self.setCurrent = function(state) {
           console.log("Leaving " + currentState.name);
           currentState = state;
           console.log("Entering " + currentState.name);
         };
 
-        this.setInitial = function(state) {
+        self.setInitial = function(state) {
           initialState = state;
 
           if(!currentState)
@@ -147,12 +259,17 @@ package( "core.statechart", function() {
 
       });
 
+      /**
+       * Conditional state, this is basically syntactic sugar around a
+       * basic state that automatically steps through the any valid
+       * transitions
+       */
       extend(
         this.BasicState,
         function IfState(name) {
 
-          // Enter the state
-          this.enter = function(event, data) {
+          // Override BasicState's enter
+          self.enter = function(event, data) {
             // Evaluate all transitions in order until a match
             // is found and then fire that
             var keys = Object.keys(this.getOutgoing());
@@ -160,8 +277,10 @@ package( "core.statechart", function() {
             for(var i=0; i<keys.length; ++i) {
               var outgoing = this.getOutgoing[keys[i]];
 
+              // TODO: bind this to the executing statechart...
               if(outgoing.test(event, data)) {
                 outgoing.fire(event, data);
+                break;
               }
             }
           };
@@ -170,13 +289,22 @@ package( "core.statechart", function() {
     });
 
     package("transition", function() {
-      /// Transition
-      /// transitions connect two classes
+
+      /**
+       * Connect two states together.
+       *
+       * TODO: events should be a JSON object
+       * @param events - an array of events that this transition responds to
+       * @param from - where are we coming from?
+       * @param to - where are we going to?
+       * @triggers - an array of triggers to fire after this transition has stepped
+       * @guard - the guard condition on this transition
+       */
       define(
         function Transition(events, from, to, triggers, guard){
-          /////////////////////////////
-          // private
-          /////////////////////////////
+          ////////////////////////////////////
+          // Private
+          ////////////////////////////////////
           function step(event, data) {
             if(from)
               from.exit(event, data);
@@ -187,18 +315,18 @@ package( "core.statechart", function() {
             return to;
           }
 
-          /////////////////////////////
-          // public
-          /////////////////////////////
-          this.test = function(event, data) {
-            return this.events.indexOf(event) != -1 &&
-              ((!this.guard) || (this.guard && this.guard()));
+          ////////////////////////////////////
+          // Public
+          ////////////////////////////////////
+          self.test = function(event, data) {
+            return self.events.indexOf(event) != -1 &&
+              ((!self.guard) || (self.guard && self.guard()));
           }
 
-          this.fire = function(event, data) {
+          self.fire = function(event, data) {
             var ret = from;
 
-            if(this.test(event, data)) {
+            if(self.test(event, data)) {
               ret = step(event, data);
 
               if(triggers)
@@ -210,167 +338,71 @@ package( "core.statechart", function() {
             return ret;
           };
 
-          this.setFrom = function(state) {
+          self.setFrom = function(state) {
             if(from)
-              from.removeOutgoing(this);
+              from.removeOutgoing(self);
 
             from = state;
 
             if(from)
-              from.addOutgoing(this);
+              from.addOutgoing(self);
           };
 
-          this.setTo = function(state) {
+          self.setTo = function(state) {
             if(to)
-              to.removeIncoming(this);
+              to.removeIncoming(self);
 
             to = state;
 
             if(to)
-              to.addIncoming(this);
+              to.addIncoming(self);
           };
 
-          /////////////////////////////
-          // constructor logic...
-          /////////////////////////////
-          if(typeof events == "string")
-            events = [events];
-          else if(events == undefined)
+          ////////////////////////////////////
+          // Constructor
+          ////////////////////////////////////
+          if(!events)
             events = [undefined];
+          else if(typeof events == "string")
+            events = [events];
 
-          this.triggers = triggers || [];
-          this.events = events;
-          this.guard = guard;
+          self.triggers = triggers || [];
+          self.events = events;
+          self.guard = guard;
 
-          this.setFrom(from);
-          this.setTo(to);
+          self.setFrom(from);
+          self.setTo(to);
 
       });
 
+      /**
+       * Transition that is capable of performing some action while transitioning
+       * from one state to the next
+       */
       inherit(
         this.Transition,
-        function ActiveTransition(event, from, to, triggers, guard, perform){
+        function ActiveTransition(events, from, to, triggers, guard, perform){
 
           // Directly override the internal scope of
           // version of step in Transition :O
           function step(event, data) {
-            this.from.exit(event, data);
-            // Boom. We now have a transition that can perform an event
-            if(perform)
-              perform();
+            if(from)
+              from.exit(event, data);
 
-            this.to.enter(event, data);
+            // Boom. We now have a transition that can perform an event
+            if(perform) {
+              console.log("Performing transition action");
+              perform(event, data);
+            }
+
+            if(to)
+              to.enter(event, data);
+
+            return to;
           }
 
         });
 
     });
   });
-
-package( "core.statechart.events", function() {
-  /// Mouse Event provides a set of convenience functions for a mouse event.
-  /// This is used for statechart events
-  define(
-    function MouseEvent(event) {
-      var button,
-        type,
-        eventString;
-
-      // Add the current event to the protected scope
-      $this.event = event;
-
-      function getButton() {
-        var which;
-
-        switch(event.which) {
-          case 1:
-            which = "left"
-            break;
-          case 2:
-            which = "middle"
-            break;
-          case 3:
-            which = "right"
-            break;
-          default:
-            which = "mouse";
-        }
-
-        return which;
-      }
-
-      function getEventType() {
-        return event.type.replace(/mouse/, "");
-      }
-
-      this.setEvent = function(newEvent) {
-        event = newEvent;
-        button = getButton(event);
-        type = getEventType();
-        eventString = button + "_" + type;
-      };
-
-      this.trigger = function() {
-        return eventString;
-      };
-
-
-      if(event)
-        this.setEvent(event);
-    });
-
-});
-
-package("model", function(){
-  // Concrete element
-  define(
-    function ConcreteElement(name) {
-      this.abstract = null;
-      this.x = 0;
-      this.y = 0;
-      this.name = name;
-
-      // Inner implementation.
-      function render() {
-        throw new Error("function has not been implemented!");
-      }
-
-      this.render = function() {
-        render();
-      };
-  });
-
-  // Abstract element!
-  define( function
-    AbstractElement(name) {
-      this.name = name;
-  });
-
-  package("box", function(){
-
-    // Inherit ConcreteElement and modify its private scope
-    // TODO: fix this, should still act as local
-    inherit(
-      model.ConcreteElement,
-      function ConcreteBox(name, abstract) {
-        // I need to figure out a better way to scope this.
-        this.abstract = abstract || new model.AbstractBox(name);
-
-        function render() {
-          console.log("woo!");
-        }
-
-        type(model.AbstractBox, this.abstract);
-    });
-
-    // Extend AbstractElement -- we're only adding
-    extend(
-      model.AbstractElement,
-      function AbstractBox(name) {
-        this.width = 0;
-        this.height = 0;
-    });
-
-  });
-
 });

@@ -30,6 +30,7 @@
   "core.statechart.transition",
   "core.statechart.events",
     function() {
+      debugger;
       // Create a basic statechart
       var sc = new Statechart( "Sample Statechart" ),
         startState = new BasicState("Initialize"),
@@ -48,9 +49,20 @@
 
         eventMouseDown = new Transition("left_down", waitState, mouseDown),
         eventMouseDragging = new Transition("left_move", mouseDown, mouseDragging),
+        eventMouseReleased = new Transition("left_up", mouseDown, waitState),
         eventMouseContDragging = new Transition("left_move", mouseDragging, mouseDragging),
-        eventMDReleased = new Transition("left_up", mouseDragging, waitState);
-        eventMDReleased2 = new Transition("mouse_move", mouseDragging, waitState);
+
+        eventMDReleased = new ActiveTransition("left_up", mouseDragging, waitState, null, null,
+          function(event, data){
+            mouseDiv.style["left"] = data.x + "px";
+            mouseDiv.style["top"] = data.y + "px";
+          }),
+
+        eventMDReleased2 = new ActiveTransition("mouse_move", mouseDragging, waitState, null, null,
+          function(event, data){
+            mouseDiv.style["left"] = data.x + "px";
+            mouseDiv.style["top"] = data.y + "px";
+          });
 
       var body = document.getElementsByTagName("body")[0],
         draggableDiv = document.getElementById("draggable"),
@@ -58,6 +70,11 @@
 
       // Recycle the mouse event -- class creation is still expensive
       var mouseEvent = new MouseEvent();
+
+      mouseDown.enter = function(event, data) {
+        draggableDiv.style["left"] = data.x + "px";
+        draggableDiv.style["top"] = data.y + "px";
+      };
 
       mouseDragging.enter = function(event, data) {
         draggableDiv.style["left"] = data.x + "px";
@@ -69,25 +86,31 @@
         mouseDiv.style["top"] = data.y + "px";
       };
 
-      body.onmousemove = function(event) {
-        mouseEvent.setEvent(event);
+      body.addEventListener('mousemove', function(event) {
+        mouseEvent.setEvent("mousemove");
+        mouseEvent.setData(event);
         sc.fire(mouseEvent.trigger(), event);
-      };
+      });
 
-      body.onmousedown = function(event) {
-        mouseEvent.setEvent(event);
+      body.addEventListener('mousedown', function(event) {
+        mouseEvent.setEvent("mousedown");
+        mouseEvent.setData(event);
         sc.fire(mouseEvent.trigger(), event);
-      };
+      });
 
-      body.onmouseup = function(event) {
-        mouseEvent.setEvent(event);
+      body.addEventListener('mouseup', function(event) {
+        mouseEvent.setEvent("mouseup");
+        mouseEvent.setData(event);
         sc.fire(mouseEvent.trigger(), event);
-      };
+      });
 
-      body.onmousewheel = function(event) {
-        var mouseEvent = new MouseEvent(event);
+      body.addEventListener('mousewheel', function(event) {
+        mouseEvent.setEvent("mousewheel");
+        mouseEvent.setData(event);
         sc.fire(mouseEvent.trigger(), event);
-      };
+      });
+
+      debugger;
 
       sc.root().setInitial(startState);
       sc.fire();

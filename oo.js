@@ -4,15 +4,17 @@
   else
     oo = window;
 
-  Class = oo.Class || function() {var $this = {};};
+  Class = oo.Class || function() {var $self = {};};
 
   Package = oo.Package || function() {
     var define,
       extend,
       package,
       inherit,
-      self = this;
+      self = this,
+      $pkg = this; // self, and $pkg are useless here
 
+    // TODO: clean this up, make it more efficient
     this.getClasses = function() {
       var scope = this,
         classes = Object.keys(this).filter(function(entry){
@@ -26,7 +28,8 @@
         })];
     };
 
-    // Create redirecting private variables. Wat.
+    // Create redirecting private variables. This allows for local calls within
+    // class/package definitions (ie define rather than this.define)
     define = function(extension, def) {
       self.define(extension, def);
     };
@@ -37,17 +40,9 @@
       // [id | class]+, def -- creates a basic extension of class
       // id, extension, def -- creates an extension of extension using def
 
-      // if(typeof id == "function") {
-      //   def = id;
-      // } else {
-        // if(extension == undefined && def == undefined)
-        //   return this[id];
-        if(typeof extension == "string" && def != undefined) {
-          // var index = this._ids.indexOf(extension);
-          // extension = this._classes[index];
-          extension = this[extension];
-        }
-      // }
+      if(typeof extension == "string" && def != undefined) {
+        extension = this[extension];
+      }
 
       // if we have an extension definition, but no definition,
       // then we're using the two param version of class()
@@ -55,6 +50,7 @@
         def = extension;
         extension = undefined;
       }
+
       var id = def.name;
 
       if(extension)
@@ -62,8 +58,6 @@
       else
         def = this.extend(Class, def);
 
-      // this._ids.push(id);
-      // this._classes.push(def);
       this[id] = def;
 
       // Now return the package -- this allows for classes to be chained
@@ -72,16 +66,16 @@
 
     // Create redirecting private variables. Wat.
     package = function() {
-      if(arguments.length == 1)
-        oo.package.call(self, arguments[0]);
-      else if(arguments.length == 2)
-        oo.package.call(self, arguments[0], arguments[1]);
-      else if(arguments.length == 3)
-        oo.package.call(self, arguments[0], arguments[1], arguments[3]);
+      oo.package.apply(self, arguments);
+      // if(arguments.length == 1)
+      //   oo.package.call(self, arguments[0]);
+      // else if(arguments.length == 2)
+      //   oo.package.call(self, arguments[0], arguments[1]);
+      // else if(arguments.length == 3)
+      //   oo.package.call(self, arguments[0], arguments[1], arguments[3]);
     };
 
     this.package = function(id, func) {
-      // return oo.package(this, id, func);
       var details = this.getClasses(),
         ids = details[0],
         classes = details[1],
@@ -101,6 +95,14 @@
     };
 
     this.extend = function(clss, def) {
+      var scope = this;
+
+      if(arguments.length == 3) {
+        scope = arguments[0];
+        clss = arguments[1];
+        def = arguments[2];
+      }
+
       var start = clss.toString(),
         tail = def.toString();
 
@@ -112,8 +114,10 @@
         .replace(/^function[\w\s\(\),]+\{/, "")
         .replace(/\}$/, "");
 
-      // Now remove the header
-      tail = "function(){" + tail.replace(header, "");
+      // TODO: this is where $pkg needs to be redefined...
+
+      // Now remove the header, create the private scope _self
+      tail = "function(){ var self=this;" + tail.replace(header, "");
 
       // Strip off the inherited class's function header and footer,
       // and replace with the new header
@@ -122,7 +126,7 @@
 
       // Now assemble the new scope!
       var assembledScope = start + "\n(" + tail + ").apply(this);";
-      return this[def.name] = eval("(" + assembledScope + "})");
+      return this[def.name] = eval.call(scope, "(" + assembledScope + "})");
     };
 
     // Create redirecting private variables. Wat.
@@ -135,10 +139,34 @@
         clss = this[clss];
       }
 
-      def = oo.inherit.call(this, clss, def);
-      this[def.name] = def;
+      var start = clss.toString(),
+        tail = def.toString();
 
-      return this;
+      // Get the new function's header
+      var header = tail.match(/^function[\w\s\(\),]+\{/)[0];
+
+      // Strip the header and footer from the extended scope
+      start = start
+        .replace(/^function[\w\s\(\),]+\{/, "")
+        .replace(/\}$/, "");
+
+      // Now remove the header
+      // tail = "function(){" + tail.replace(header, "");
+      tail = tail.replace(header, "");
+
+      // Strip off the inherited class's function header and footer,
+      // and replace with the new header
+      tail = tail.replace( start, "");
+      start = header + "\n" + start + "\n";
+
+      // Now strip off the ending of the most recent scope
+      start = start.replace(/\}\)\.apply\(this\);[\s\}]*$/, "");
+
+      // Now assemble the new scope!
+      var assembledScope = start + "\n" + tail + ").apply(this);";
+
+      // perform the voodoo and regenerate the class with the proper scope
+      return this[def.name] = eval.call(this, "(" + assembledScope + "})");
     };
 
   };
@@ -278,13 +306,21 @@
           classes = details[1];
 
         for(var j=0; j<classes.length; ++j) {
-          scope_def += "var " + ids[j] + "=" + classes[j].toString() + ";";
+          scope_def += "var " + ids[j] + "= " + _args[i] + "." + ids[j] + ";";
         }
       }
 
       // Create the scope
-      eval(scope_def);
-      return eval("(" + func + ")").apply(this);
+      // scope_def = "function(){" + scope_def + " return " + func.toString() + "}";
+      // eval(scope_def);
+      var scopeFunc = "function(scope, func) {" +
+        "eval(scope);" +
+        "return eval('(' + func.toString() + ')').call(this);" +
+      "}";
+
+      return eval( "(" + scopeFunc + ")").call(currPkg, scope_def, func)
+      // return func.apply(this);
+      // return eval("(" + scope_def + ")()").apply(currPkg);
     } else {
       // Now execute the function!
       return func.apply(this);
