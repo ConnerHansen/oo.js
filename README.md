@@ -40,15 +40,15 @@ package("org.example.animal", function(){
     var type,
       move;
     
-    this.move = function() {
+    self.move = function() {
       console.log(move);
     };
     
-    this.speak = function() {
+    self.speak = function() {
       console.log(speak);
     };
     
-    this.identify = function() {
+    self.identify = function() {
       console.log("I'm " + name + " and I'm a(n) " + type);
     };
     
@@ -74,15 +74,15 @@ package("org.example.animal", function(){
     var type,
       move;
     
-    this.move = function() {
+    self.move = function() {
       console.log(move);
     };
     
-    this.speak = function() {
+    self.speak = function() {
       console.log(speak);
     };
     
-    this.identify = function() {
+    self.identify = function() {
       console.log("I'm " + name + " and I'm a(n) " + type);
     };
     
@@ -96,7 +96,7 @@ package("org.example.animal", function(){
       speak = "bark!";
       type = "dog";
       
-      this.wag = function() {
+      self.wag = function() {
         console.log("*tail wagging intensifies*");
       };
       
@@ -119,15 +119,15 @@ package("org.example.animal", function(){
     var type,
       move;
     
-    this.move = function() {
+    self.move = function() {
       console.log(move);
     };
     
-    this.speak = function() {
+    self.speak = function() {
       console.log(speak);
     };
     
-    this.identify = function() {
+    self.identify = function() {
       console.log("I'm " + name + " and I'm a(n) " + type);
     };
     
@@ -141,7 +141,7 @@ package("org.example.animal", function(){
       speak = "bark!";
       type = "dog";
       
-      this.wag = function() {
+      self.wag = function() {
         console.log("*tail wagging intensifies*");
       };
       
@@ -152,7 +152,7 @@ package("org.example.animal", function(){
     this.Dog,
     function Bloodhound(name) {
       
-      this.hunt = function() {
+      self.hunt = function() {
         console.log("Imma huntin!");
       };
       
@@ -169,10 +169,10 @@ Classes can also be tacked on after the package declaration.
 package("oo.statechart.state")
 .class(
   function AbstractState(){
-    this.name = undefined;
+    self.name = undefined;
 
-    this.enter = function(){};
-    this.exit = function(){};
+    self.enter = function(){};
+    self.exit = function(){};
   })
 
 .extend( "AbstractState",
@@ -180,29 +180,29 @@ package("oo.statechart.state")
     var incomingPaths = {},
       outgoingPaths = {};
 
-    this.name = name;
+    self.name = name;
 
-    this.addIncoming = function(path) {
+    self.addIncoming = function(path) {
       incomingPaths[path.events] = path;
     };
 
-    this.addOutgoing = function(path) {
+    self.addOutgoing = function(path) {
       outgoingPaths[path.events] = path;
     };
 
-    this.getIncoming = function() {
+    self.getIncoming = function() {
       return incomingPaths;
     };
 
-    this.getOutgoing = function() {
+    self.getOutgoing = function() {
       return outgoingPaths;
     };
 
-    this.removeIncoming = function(state) {
+    self.removeIncoming = function(state) {
       delete incomingPaths[state.name];
     };
 
-    this.removeOutgoing = function(state) {
+    self.removeOutgoing = function(state) {
       delete outgoingPaths[state.name];
     };
 
@@ -214,27 +214,27 @@ package("oo.statechart.state")
       initialState,
       currentState;
 
-    this.addState = function(state) {
+    self.addState = function(state) {
       states[state.id] = state;
     };
 
-    this.getCurrent = function() {
+    self.getCurrent = function() {
       return currentState;
     };
 
-    this.getInitial = function() {
+    self.getInitial = function() {
       return initialState;
     }
 
-    this.removeState = function(state) {
+    self.removeState = function(state) {
       return delete states[state.id];
     };
 
-    this.setCurrent = function(state) {
+    self.setCurrent = function(state) {
       currentState = state;
     };
 
-    this.setInitial = function(state) {
+    self.setInitial = function(state) {
       initialState = state;
 
       if(!currentState)
