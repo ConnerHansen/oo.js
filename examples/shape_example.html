@@ -1,0 +1,154 @@
+<html>
+<head>
+  <style>
+    body {
+      -moz-user-select     : none;
+      -khtml-user-select   : none;
+      -webkit-user-select  : none;
+      -o-user-select       : none;
+      user-select          : none;
+    }
+  </style>
+  <script>
+  </script>
+</head>
+  <body>
+  </body>
+  <script src="../oo.js" type="application/javascript"></script>
+  <script>
+
+  package( "org.example", function() {
+    package( "helper", function() {
+      /**
+       * Convenience class for locating a point
+       */
+      define(
+      function Point(_x, _y) {
+        var x = 0,
+          y = 0;
+
+        // Create the getters and setters
+        rw("x", "y");
+
+        //////////////////
+        // Constructor!
+        //////////////////
+        
+        // Set the x and y coordinates if we have them
+        if(_x)
+          self.setX(_x);
+        if(_y)
+          self.setY(_y);
+      });
+
+    });
+
+    /**
+     * Container for a shape -- we know it has to be renderable, it has to
+     * have a position, and an area
+     */
+    define(
+    function Shape() {
+      var position = new org.example.helper.Point(),
+        width = 0,
+        height = 0,
+        name = undefined;
+
+      // Getters and setters
+      r("position"); // read only!
+      rw("name", "width", "height"); // read write!
+
+      // Abstract functions! Convenient for whenever we get IDE support
+      self.area = abstract;
+      self.render = abstract;
+
+      // TODO: add support for passthrough
+      // something like:
+      // rw("position.x")? -- maybe, but how do we know if it has getters and setters?
+      // rw({ "x": ["position.getX", "position.setX"] })? -- too verbose
+      self.setX = function(val) {
+        position.setX(val);
+      };
+
+      self.setY = function(val) {
+        position.setY(val);
+      };
+    });
+
+    extend(
+      self.Shape,
+      function Box() {
+        var div = undefined,
+          style = "",
+          clss = undefined;
+
+        r("div");
+        rw("style");
+
+        ///////////////////
+        // Private
+        ///////////////////
+        function assembleStyle() {
+          return style +
+            ";width: " + self.getWidth() +
+            ";height: " + self.getHeight() +
+            ";left: " + self.getPosition().getX() +
+            ";top: " + self.getPosition().getY();
+        }
+
+        ///////////////////
+        // Public
+        ///////////////////
+        self.area = function() {
+          return self.getWidth() * self.getHeight();
+        };
+
+        self.render = function() {
+          if(self.getName()) {
+            if(div) {
+              div.setAttribute("style", assembleStyle());
+              div.setAttribute("class", clss);
+            } else {
+              div = document.createElement("div");
+              div.id = name
+              div.setAttribute("style", assembleStyle());
+              div.setAttribute("class", clss);
+
+
+              document.body.appendChild(div);
+            }
+
+          } else
+            throw new Error("name has not been set!");
+        };
+
+      }
+    );
+
+  });
+
+  // Now, we're going to draw two divs!
+  require(
+  "org.example", function() {
+
+    // Global so you can play around with them!
+    b1 = new Box(),
+    b2 = new Box();
+
+    b1.setStyle("background-color: green; position: absolute; box-shadow: 5px 5px 10px rgba(0,0,0,0.25);");
+    b1.setX("100px");
+    b1.setY("50px");
+    b1.setWidth("50px");
+    b1.setHeight("25%");
+    b1.render();
+
+    b2.setStyle("background-color: orange; position: absolute; border: 2px dotted black");
+    b2.setX("10px");
+    b2.setY("200px");
+    b2.setWidth("150px");
+    b2.setHeight("10px");
+    b2.render();
+
+  });
+  </script>
+</html>

@@ -30,7 +30,6 @@
   "core.statechart.transition",
   "core.statechart.events",
     function() {
-      debugger;
       // Create a basic statechart
       var sc = new Statechart( "Sample Statechart" ),
         startState = new BasicState("Initialize"),
@@ -109,8 +108,6 @@
         mouseEvent.setData(event);
         sc.fire(mouseEvent.trigger(), event);
       });
-
-      debugger;
 
       sc.root().setInitial(startState);
       sc.fire();

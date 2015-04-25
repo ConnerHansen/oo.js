@@ -10,9 +10,11 @@
     var define,
       extend,
       package,
+      require,
       inherit,
       self = this,
-      $pkg = this; // self, and $pkg are useless here
+      $pkg = this,
+      $package = this; // self, and $pkg are useless here
 
     // TODO: clean this up, make it more efficient
     this.getClasses = function() {
@@ -34,7 +36,7 @@
       self.define(extension, def);
     };
 
-    this.define = function(extension, def) {
+    self.define = function(extension, def) {
       // call with:
       // def -- returns an extension of class, but MAKE SURE YOU USE A NAMED FUNCTION >:(
       // [id | class]+, def -- creates a basic extension of class
@@ -54,9 +56,9 @@
       var id = def.name;
 
       if(extension)
-        def = this.extend(extension, def);
+        def = self.extend(extension, def);
       else
-        def = this.extend(Class, def);
+        def = self.extend(Class, def);
 
       this[id] = def;
 
@@ -66,13 +68,7 @@
 
     // Create redirecting private variables. Wat.
     package = function() {
-      oo.package.apply(self, arguments);
-      // if(arguments.length == 1)
-      //   oo.package.call(self, arguments[0]);
-      // else if(arguments.length == 2)
-      //   oo.package.call(self, arguments[0], arguments[1]);
-      // else if(arguments.length == 3)
-      //   oo.package.call(self, arguments[0], arguments[1], arguments[3]);
+      return oo.package.apply(self, arguments);
     };
 
     this.package = function(id, func) {
@@ -89,12 +85,76 @@
       eval("(" + func.toString() + ")").apply(this);
     };
 
+    require = function() {
+      self.require.apply(self, arguments);
+    };
+
+    self.require = function(args, func) {
+      if(args == undefined || func == undefined)
+        throw new Error("Require must have at least one package passed in and be given a function to execute");
+
+      // Correct for the documentation...
+      var _args = [],
+        _scope = this;
+
+      for(var i=0; i<arguments.length; ++i){
+        _args.push(arguments[i]);
+      }
+
+      // the last arg is actually the func object
+      func = _args.pop();
+
+      // var extend = function(clss, def) {
+      //   self.extend(this, clss, def);
+      // };
+      //
+      // var define = function(clss, def) {
+      //   debugger;
+      //   self.define.call(this, clss, def);
+      // };
+
+      if(_args.length > 0) {
+        // We can also pass in the scope
+        if(typeof _args[0] == "object")
+          scope = _args.shift();
+
+        var scope_def = "";
+        for(var i=0; i<_args.length; ++i) {
+          var currPkg = package(_args[i]),
+            details = currPkg.getClasses(),
+            ids = details[0],
+            classes = details[1];
+
+          for(var j=0; j<classes.length; ++j) {
+            scope_def += "var " + ids[j] + "=$package." + _args[i] + "." + ids[j] + ";";
+          }
+        }
+
+        // Create the scope
+        // scope_def = "function(){" + scope_def + " return " + func.toString() + "}";
+        // eval(scope_def);
+        var scopeFunc = "function(scope, func) {" +
+          // "var extend = " + extend.toString() + ";" +
+          // "var define = " + define.toString() + ";" +
+          "eval(scope);" +
+          "return eval('(' + func.toString() + ')').call(this);" +
+        "}";
+
+        return eval( "(" + scopeFunc + ")").call(this, scope_def, func)
+        // return func.apply(this);
+        // return eval("(" + scope_def + ")()").apply(currPkg);
+      } else {
+        // Now execute the function!
+        return func.apply(this);
+      }
+    };
+
     // Create redirecting private variables. Wat.
     extend = function(clss, def) {
       self.extend(clss, def);
     };
 
-    this.extend = function(clss, def) {
+    self.extend = function(clss, def) {
       var scope = this;
 
       if(arguments.length == 3) {
@@ -109,6 +169,63 @@
       // Get the new function's header
       var header = tail.match(/^function[\w\s\(\),]+\{/)[0];
 
+      // Define our reader and writer -- move the _read and _write
+      // functions to globals, this way we're not redefining so much
+      var read = function() {
+        _read.apply(self, arguments);
+      };
+
+      var write = function() {
+        _write.apply(self, arguments);
+      };
+
+      var read_write = function() {
+        _read.apply(self, arguments);
+        _write.apply(self, arguments);
+      };
+
+      var _read = function() {
+        for(var i=0; i<arguments.length; ++i) {
+          var varName = arguments[i]
+            name = varName;
+
+          // strip off any leading symbols
+          // then make the leading character upper case
+          name = name.replace(/^[_$]/, "")
+            .replace(name[0], name[0].toUpperCase());
+
+          self[ "get" + name ] = function(varName) {
+            return function() {
+              return eval( varName );
+            };
+          }(varName);
+        }
+      };
+
+      var _write = function() {
+        for(var i=0; i<arguments.length; ++i) {
+          var varName = arguments[i]
+            name = varName;
+
+          // strip off any leading symbols
+          // then make the leading character upper case
+          name = name.replace(/^[_$]/, "")
+            .replace(name[0], name[0].toUpperCase());
+
+          self[ "set" + name ] = function(varName) {
+
+            return function(val) {
+              if(typeof val == "object")
+                val = JSON.stringify(val);
+              else if(typeof val == "string")
+                val = "\"" + val + "\"";
+
+              return eval(varName + "=" + val.toString() +  ";");
+            };
+          }(varName);
+        }
+      };
+
       // Strip the header and footer from the extended scope
       start = start
         .replace(/^function[\w\s\(\),]+\{/, "")
@@ -116,8 +233,15 @@
 
       // TODO: this is where $pkg needs to be redefined...
 
-      // Now remove the header, create the private scope _self
-      tail = "function(){ var self=this;" + tail.replace(header, "");
+      // Now remove the header, create the local self scope,
+      // setup the automated functions
+      tail = "function(){ var self=this;"
+        + "var _read=" + _read.toString() + ";"
+        + "var _write=" + _write.toString() + ";"
+        + "var r=" + read.toString() + ";"
+        + "var w=" + write.toString() + ";"
+        + "var rw=" + read_write.toString() + ";"
+        + tail.replace(header, "");
 
       // Strip off the inherited class's function header and footer,
       // and replace with the new header
@@ -343,3 +467,15 @@
 package = oo.package;
 extend = oo.extend;
 inherit = oo.inherit;
+
+function AbstractCallError(message) {
+  this.name = "AbstractCallError",
+  this.message = message,
+  this.stack = (new Error()).stack;
+}
+
+AbstractCallError.prototype = new Error;
+
+abstract = function() {
+  throw new AbstractCallError("Cannot execute abstract function");
+}
