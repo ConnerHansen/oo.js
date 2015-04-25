@@ -1,6 +1,20 @@
 # oo.js
 Yet another object oriented JS library. This implementation of Object Oriented design in JavaScript is meant to be an experiment, and as such is not intended for production usage yet. The underlying goal of oo.js is to allow package and class access/construction that more closely resembles a "classical" OO structure. The main oo.js script exposes a handful of functions to help achieve this.
 
+### Changelog
+---
+**4/25/15**
+- Added support for getter/setter generation within class definitions
+  - **r()** creates public getters for a set of variable (ex: r("x", "y", "z") will create class.getX(), class.getY(), and class.getZ() getters
+  - **w()** creates public setters for a set of variables (ex: w("x", "y", "z") will create class.setX(), class.setY(), and class.setZ() setters
+  - **rw()** creates both getters and setters
+- require is now package aware, invoking within the local package if desired
+- starting to add support for class reflection so we don't have to use the full package name for a class in a different package
+- added support for abstract functions
+- added a new example in examples/shape_example.html
+
+---
+
 # Functions
 - **package( path, [func] )** - makes a package or executes within a package's scope
   - _path_ - the path of the package (ex: "org.sample.statechart" )
