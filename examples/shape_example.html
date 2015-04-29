@@ -33,7 +33,7 @@
         //////////////////
         // Constructor!
         //////////////////
-        
+
         // Set the x and y coordinates if we have them
         if(_x)
           self.setX(_x);
@@ -48,8 +48,9 @@
      * have a position, and an area
      */
     define(
+    "helper",
     function Shape() {
-      var position = new org.example.helper.Point(),
+      var position = new Point(),
         width = 0,
         height = 0,
         name = undefined;
@@ -130,7 +131,6 @@
   // Now, we're going to draw two divs!
   require(
   "org.example", function() {
-
     // Global so you can play around with them!
     b1 = new Box(),
     b2 = new Box();

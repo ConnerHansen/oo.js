@@ -6,22 +6,31 @@
 
   Class = oo.Class || function() {var $self = {};};
 
-  Package = oo.Package || function() {
+  Package = oo.Package || function( name ) {
     var define,
       extend,
       package,
       require,
       inherit,
+      _classes = {},
       self = this,
       $pkg = this,
       $package = this; // self, and $pkg are useless here
 
+    this.path = function() {
+      if(this.parent && !(this.parent instanceof Window))
+        return this.parent.path() + "." + name;
+      else
+        return name;
+    };
+
     // TODO: clean this up, make it more efficient
     this.getClasses = function() {
       var scope = this,
-        classes = Object.keys(this).filter(function(entry){
-          return entry.match(/^[A-Z]/);
-        });
+        classes = Object.keys(_classes);
+        // classes = Object.keys(this).filter(function(entry){
+        //   return entry.match(/^[A-Z]/);
+        // });
 
       return [
         classes,
@@ -33,34 +42,68 @@
     // Create redirecting private variables. This allows for local calls within
     // class/package definitions (ie define rather than this.define)
     define = function(extension, def) {
-      self.define(extension, def);
+      self.define.apply(self, arguments);
+      // self.define(extension, def);
     };
 
-    self.define = function(extension, def) {
+    self.define = function(def) {
       // call with:
       // def -- returns an extension of class, but MAKE SURE YOU USE A NAMED FUNCTION >:(
-      // [id | class]+, def -- creates a basic extension of class
-      // id, extension, def -- creates an extension of extension using def
+      // [id | class], def -- creates a basic extension of class matching id name or extension class
+      // [path]+, id | extension, def -- creates an extension of extension using def, including the paths in the local scope
 
-      if(typeof extension == "string" && def != undefined) {
-        extension = this[extension];
+      var includedPkgs = [],
+        params = "";
+
+      // Are we including other packages in this definition scope?
+      if(arguments.length > 1) {
+        for(var i=0; i < arguments.length - 1; ++i) {
+          includedPkgs.push(arguments[i]);
+        }
+
+        var scope_def = "";
+        for(var i=0; i<includedPkgs.length; ++i) {
+          var currPkg = package(includedPkgs[i]),
+            globalPkg = oo.package(includedPkgs[i]),
+            currPkg = currPkg || globalPkg,
+            details = currPkg.getClasses(),
+            ids = details[0],
+            classes = details[1];
+
+          if(!globalPkg)
+            for(var j=0; j<classes.length; ++j) {
+              scope_def += "var " + ids[j] + "=" + this.path() + "." + includedPkgs[i] + "." + ids[j] + ";";
+            }
+          else
+            for(var j=0; j<classes.length; ++j) {
+              scope_def += "var " + ids[j] + "=" + includedPkgs[i] + "." + ids[j] + ";";
+            }
+        }
+        params = scope_def;
+
+        //extension = arguments[ arguments.length - 2 ];
+        def = arguments[ arguments.length - 1 ];
       }
+
+      // if(typeof extension == "string" && def != undefined)
+      //   extension = this[extension];
 
       // if we have an extension definition, but no definition,
       // then we're using the two param version of class()
-      if(extension && !def) {
-        def = extension;
-        extension = undefined;
-      }
+      // if(extension && !def) {
+      //   def = extension;
+      //   extension = undefined;
+      // }
 
       var id = def.name;
 
-      if(extension)
-        def = self.extend(extension, def);
-      else
-        def = self.extend(Class, def);
+      // if(extension)
+      //   def = self.extend(self, params, extension, def);
+      // else
+        def = self.extend(self, params, Class, def);
 
       this[id] = def;
+      _classes[id] = def;
 
       // Now return the package -- this allows for classes to be chained
       return this;
@@ -71,8 +114,8 @@
       return oo.package.apply(self, arguments);
     };
 
-    this.package = function(id, func) {
-      var details = this.getClasses(),
+    self.package = function(id, func) {
+      var details = self.getClasses(),
         ids = details[0],
         classes = details[1],
         scopeDef = "";
@@ -82,7 +125,7 @@
       }
 
       eval(scopeDef);
-      eval("(" + func.toString() + ")").apply(this);
+      eval("(" + func.toString() + ")").apply(self);
     };
 
     require = function() {
@@ -151,13 +194,19 @@
 
     // Create redirecting private variables. Wat.
     extend = function(clss, def) {
-      self.extend(clss, def);
+      self.extend.apply(self, arguments);
     };
 
     self.extend = function(clss, def) {
-      var scope = this;
+      var scope = this,
+        params = "";
 
-      if(arguments.length == 3) {
+      if( arguments.length == 4) {
+        scope = arguments[0];
+        params = arguments[1];
+        clss = arguments[2];
+        def = arguments[3];
+      } else if(arguments.length == 3) {
         scope = arguments[0];
         clss = arguments[1];
         def = arguments[2];
@@ -241,6 +290,7 @@
         + "var r=" + read.toString() + ";"
         + "var w=" + write.toString() + ";"
         + "var rw=" + read_write.toString() + ";"
+        + params
         + tail.replace(header, "");
 
       // Strip off the inherited class's function header and footer,
@@ -250,7 +300,10 @@
 
       // Now assemble the new scope!
       var assembledScope = start + "\n(" + tail + ").apply(this);";
-      return this[def.name] = eval.call(scope, "(" + assembledScope + "})");
+      this[def.name] = eval.call(scope, "(" + assembledScope + "})");
+      _classes[def.name] = this[def.name];
+      return this[def.name]
+      // return this[def.name] = eval.call(scope, "(" + assembledScope + "})");
     };
 
     // Create redirecting private variables. Wat.
@@ -347,8 +400,14 @@
 
 
     for(var i=0; i<ids.length; ++i) {
+      var parent = currPkg;
+
       if(!currPkg[ids[i]]) {
-        currPkg[ids[i]] = new Package();
+        if(func) {
+          currPkg[ids[i]] = new Package(ids[i]);
+          currPkg[ids[i]].parent = parent;
+        } else
+          return null;
       }
       currPkg = currPkg[ids[i]];
     }
