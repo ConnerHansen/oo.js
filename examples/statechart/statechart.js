@@ -34,13 +34,13 @@ package( "core.statechart.events", function() {
   });
 
   /**
-   * Provices a wrapper for mouse events. Maps generic mouse event data to
+   * Provides a wrapper for mouse events. Maps generic mouse event data to
    * events usable by the statechart
    *
    * Extends ScEvent
    */
   extend(
-    this.ScEvent,
+    self.ScEvent,
     function MouseEvent(event, data) {
       var button,
         type,
@@ -50,7 +50,6 @@ package( "core.statechart.events", function() {
         var which = "",
           data = self.getData();
 
-        console.log(data);
         if(data)
           switch(data.which) {
             case 1:
@@ -72,7 +71,6 @@ package( "core.statechart.events", function() {
       function getEventType() {
         var data = self.getData();
 
-        console.log(data);
         if(data)
           return data.type.replace(/mouse/, "");
         else
@@ -100,76 +98,8 @@ package( "core.statechart.events", function() {
 //////////////////////////////////////////////////////////////
 // Statecharts!
 //////////////////////////////////////////////////////////////
-// TODO fix the require scope...
 require("core.statechart.events", function(){
 package( "core.statechart", function() {
-
-  /**
-   * Wrapper for a statechart. This initializes with a root composite state
-   * (ie an OR-state) by default
-   *
-   * @param name - the name of the statechart
-   */
-  define(
-    function Statechart(name) {
-      ////////////////////////////////////
-      // Private
-      ////////////////////////////////////
-      var current,
-        macrosteps = [],
-        microsteps = [],
-        // TODO: core.statechart should be local...
-        // Local require?
-        root = new core.statechart.state.CompositeState("_root"),
-        running = false;
-
-      function fireMicro(evt) {
-        microsteps.push(evt);
-
-        if(!running) {
-          running = true;
-
-          while(microsteps.length > 0) {
-            var activeTransitions = root.getCurrent().getOutgoing(),
-              step = microsteps.shift();
-
-            var t = activeTransitions[step.getEvent()];
-            if(t) {
-              if(t.test(step.getEvent(), step.getData()))
-                root.setCurrent(t.fire(step.getEvent(), step.getData()));
-            }
-          }
-
-          running = false;
-        }
-      };
-
-      ////////////////////////////////////
-      // Pubic
-      ////////////////////////////////////
-      self.current = function() {
-        return root.getCurrent();
-      };
-
-      self.fire = function(evt, data) {
-        var event = new core.statechart.events.MouseEvent(evt, data);
-
-        macrosteps.push(event);
-        if(!running) {
-          while(macrosteps.length > 0) {
-            var step = macrosteps.shift();
-            fireMicro(step);
-          }
-
-          fireMicro(new core.statechart.events.MouseEvent(undefined, undefined));
-        }
-      };
-
-      self.root = function() {
-        return root;
-      };
-
-    });
 
   package("state", function() {
 
@@ -221,7 +151,7 @@ package( "core.statechart", function() {
      * TODO: top down or bottom up? What kind of SC is this...
      */
     extend(
-      this.BasicState,
+      self.BasicState,
       function CompositeState(name) {
 
         var states = {},
@@ -245,9 +175,9 @@ package( "core.statechart", function() {
         };
 
         self.setCurrent = function(state) {
-          console.log("Leaving " + currentState.name);
+          // console.log("Leaving " + currentState.name);
           currentState = state;
-          console.log("Entering " + currentState.name);
+          // console.log("Entering " + currentState.name);
         };
 
         self.setInitial = function(state) {
@@ -265,17 +195,17 @@ package( "core.statechart", function() {
        * transitions
        */
       extend(
-        this.BasicState,
+        self.BasicState,
         function IfState(name) {
 
           // Override BasicState's enter
           self.enter = function(event, data) {
             // Evaluate all transitions in order until a match
             // is found and then fire that
-            var keys = Object.keys(this.getOutgoing());
+            var keys = Object.keys(self.getOutgoing());
 
             for(var i=0; i<keys.length; ++i) {
-              var outgoing = this.getOutgoing[keys[i]];
+              var outgoing = self.getOutgoing[keys[i]];
 
               // TODO: bind this to the executing statechart...
               if(outgoing.test(event, data)) {
@@ -380,7 +310,7 @@ package( "core.statechart", function() {
        * from one state to the next
        */
       inherit(
-        this.Transition,
+        self.Transition,
         function ActiveTransition(events, from, to, triggers, guard, perform){
 
           // Directly override the internal scope of
@@ -391,7 +321,6 @@ package( "core.statechart", function() {
 
             // Boom. We now have a transition that can perform an event
             if(perform) {
-              console.log("Performing transition action");
               perform(event, data);
             }
 
@@ -404,5 +333,75 @@ package( "core.statechart", function() {
         });
 
     });
-  });
-});
+
+    /**
+     * Wrapper for a statechart. This initializes with a root composite state
+     * (ie an OR-state) by default
+     *
+     * @param name - the name of the statechart
+     */
+    define(
+      "core.statechart.state",
+      "core.statechart.transition",
+      function Statechart(name) {
+        ////////////////////////////////////
+        // Private
+        ////////////////////////////////////
+        var current,
+          macrosteps = [],
+          microsteps = [],
+          // TODO: core.statechart should be local...
+          // Local require?
+          root = new CompositeState("_root"),
+          running = false;
+
+        function fireMicro(evt) {
+          microsteps.push(evt);
+
+          if(!running) {
+            running = true;
+
+            while(microsteps.length > 0) {
+              var activeTransitions = root.getCurrent().getOutgoing(),
+                step = microsteps.shift();
+
+              var t = activeTransitions[step.getEvent()];
+              if(t) {
+                if(t.test(step.getEvent(), step.getData()))
+                  root.setCurrent(t.fire(step.getEvent(), step.getData()));
+              }
+            }
+
+            running = false;
+          }
+        };
+
+        ////////////////////////////////////
+        // Pubic
+        ////////////////////////////////////
+        self.current = function() {
+          return root.getCurrent();
+        };
+
+        self.fire = function(evt, data) {
+          var event = new core.statechart.events.MouseEvent(evt, data);
+
+          macrosteps.push(event);
+          if(!running) {
+            while(macrosteps.length > 0) {
+              var step = macrosteps.shift();
+              fireMicro(step);
+            }
+
+            fireMicro(new core.statechart.events.MouseEvent(undefined, undefined));
+          }
+        };
+
+        self.root = function() {
+          return root;
+        };
+
+      });
+
+  }); // end of package
+}); // end of require

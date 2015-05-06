@@ -20,7 +20,7 @@
 
     </div>
   </body>
-  <script src="../oo.js" type="application/javascript"></script>
+  <script src="../../oo.js" type="application/javascript"></script>
   <script src="statechart.js" type="application/javascript"></script>
   <script>
   // Now do something!
@@ -30,6 +30,55 @@
   "core.statechart.transition",
   "core.statechart.events",
     function() {
+
+      function setupListeners() {
+        var body = document.getElementsByTagName("body")[0],
+          draggableDiv = document.getElementById("draggable"),
+          mouseDiv = document.getElementById("mouse");
+
+        // Recycle the mouse event -- class creation is still expensive
+        var mouseEvent = new MouseEvent();
+
+        mouseDown.enter = function(event, data) {
+          draggableDiv.style["left"] = data.x + "px";
+          draggableDiv.style["top"] = data.y + "px";
+        };
+
+        mouseDragging.enter = function(event, data) {
+          draggableDiv.style["left"] = data.x + "px";
+          draggableDiv.style["top"] = data.y + "px";
+        };
+
+        mouseFollow.enter = function(event, data) {
+          mouseDiv.style["left"] = data.x + "px";
+          mouseDiv.style["top"] = data.y + "px";
+        };
+
+        body.addEventListener('mousemove', function(event) {
+          mouseEvent.setEvent("mousemove");
+          mouseEvent.setData(event);
+          sc.fire(mouseEvent.trigger(), event);
+        });
+
+        body.addEventListener('mousedown', function(event) {
+          mouseEvent.setEvent("mousedown");
+          mouseEvent.setData(event);
+          sc.fire(mouseEvent.trigger(), event);
+        });
+
+        body.addEventListener('mouseup', function(event) {
+          mouseEvent.setEvent("mouseup");
+          mouseEvent.setData(event);
+          sc.fire(mouseEvent.trigger(), event);
+        });
+
+        body.addEventListener('mousewheel', function(event) {
+          mouseEvent.setEvent("mousewheel");
+          mouseEvent.setData(event);
+          sc.fire(mouseEvent.trigger(), event);
+        });
+      }
+
       // Create a basic statechart
       var sc = new Statechart( "Sample Statechart" ),
         startState = new BasicState("Initialize"),
@@ -51,6 +100,8 @@
         eventMouseReleased = new Transition("left_up", mouseDown, waitState),
         eventMouseContDragging = new Transition("left_move", mouseDragging, mouseDragging),
 
+        mouseDiv = document.getElementById("mouse"),
+
         eventMDReleased = new ActiveTransition("left_up", mouseDragging, waitState, null, null,
           function(event, data){
             mouseDiv.style["left"] = data.x + "px";
@@ -63,52 +114,7 @@
             mouseDiv.style["top"] = data.y + "px";
           });
 
-      var body = document.getElementsByTagName("body")[0],
-        draggableDiv = document.getElementById("draggable"),
-        mouseDiv = document.getElementById("mouse");
-
-      // Recycle the mouse event -- class creation is still expensive
-      var mouseEvent = new MouseEvent();
-
-      mouseDown.enter = function(event, data) {
-        draggableDiv.style["left"] = data.x + "px";
-        draggableDiv.style["top"] = data.y + "px";
-      };
-
-      mouseDragging.enter = function(event, data) {
-        draggableDiv.style["left"] = data.x + "px";
-        draggableDiv.style["top"] = data.y + "px";
-      };
-
-      mouseFollow.enter = function(event, data) {
-        mouseDiv.style["left"] = data.x + "px";
-        mouseDiv.style["top"] = data.y + "px";
-      };
-
-      body.addEventListener('mousemove', function(event) {
-        mouseEvent.setEvent("mousemove");
-        mouseEvent.setData(event);
-        sc.fire(mouseEvent.trigger(), event);
-      });
-
-      body.addEventListener('mousedown', function(event) {
-        mouseEvent.setEvent("mousedown");
-        mouseEvent.setData(event);
-        sc.fire(mouseEvent.trigger(), event);
-      });
-
-      body.addEventListener('mouseup', function(event) {
-        mouseEvent.setEvent("mouseup");
-        mouseEvent.setData(event);
-        sc.fire(mouseEvent.trigger(), event);
-      });
-
-      body.addEventListener('mousewheel', function(event) {
-        mouseEvent.setEvent("mousewheel");
-        mouseEvent.setData(event);
-        sc.fire(mouseEvent.trigger(), event);
-      });
-
+      setupListeners();
       sc.root().setInitial(startState);
       sc.fire();
     });

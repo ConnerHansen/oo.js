@@ -117,7 +117,7 @@ package("org.example.animal", function(){
 
   /**
    * Dog inherits Animal because a dog is an animal and
-   * must alter some private compoents of Animal
+   * must alter some private components of Animal
    */
   inherit(
     self.Animal,
@@ -166,7 +166,7 @@ package("org.example.animal", function(){
 
   /**
    * Dog inherits Animal because a dog is an animal and
-   * must alter some private compoents of Animal
+   * must alter some private components of Animal
    */
   inherit(
     self.Animal,
