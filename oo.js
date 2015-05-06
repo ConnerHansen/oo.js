@@ -17,6 +17,30 @@
       $pkg = this,
       $package = this; // self, and $pkg are useless here
 
+    function buildScopeDef(pkgs) {
+      var scopeDef = "";
+
+      for(var i=0; i<pkgs.length; ++i) {
+        var currPkg = package(pkgs[i]),
+          globalPkg = oo.package(pkgs[i]),
+          currPkg = currPkg || globalPkg,
+          details = currPkg.getClasses(),
+          ids = details[0],
+          classes = details[1];
+
+        if(!globalPkg)
+          for(var j=0; j<classes.length; ++j) {
+            scopeDef += "var " + ids[j] + "=" + this.path() + "." + pkgs[i] + "." + ids[j] + ";";
+          }
+        else
+          for(var j=0; j<classes.length; ++j) {
+            scopeDef += "var " + ids[j] + "=" + pkgs[i] + "." + ids[j] + ";";
+          }
+      }
+
+      return scopeDef;
+    }
+
     this.path = function() {
       if(this.parent && !(this.parent instanceof Window))
         return this.parent.path() + "." + name;
@@ -28,9 +52,6 @@
     this.getClasses = function() {
       var scope = this,
         classes = Object.keys(_classes);
-        // classes = Object.keys(this).filter(function(entry){
-        //   return entry.match(/^[A-Z]/);
-        // });
 
       return [
         classes,
@@ -43,67 +64,34 @@
     // class/package definitions (ie define rather than this.define)
     define = function(extension, def) {
       self.define.apply(self, arguments);
-      // self.define(extension, def);
     };
 
     self.define = function(def) {
       // call with:
-      // def -- returns an extension of class, but MAKE SURE YOU USE A NAMED FUNCTION >:(
-      // [id | class], def -- creates a basic extension of class matching id name or extension class
-      // [path]+, id | extension, def -- creates an extension of extension using def, including the paths in the local scope
+      // [path]+, def -- creates an extension of class using def, including the paths in the local scope
 
-      var includedPkgs = [],
+      var pkgs = [],
         params = "";
 
       // Are we including other packages in this definition scope?
       if(arguments.length > 1) {
+        // Don't include the last one, that's the defintion
         for(var i=0; i < arguments.length - 1; ++i) {
-          includedPkgs.push(arguments[i]);
+          pkgs.push(arguments[i]);
         }
 
-        var scope_def = "";
-        for(var i=0; i<includedPkgs.length; ++i) {
-          var currPkg = package(includedPkgs[i]),
-            globalPkg = oo.package(includedPkgs[i]),
-            currPkg = currPkg || globalPkg,
-            details = currPkg.getClasses(),
-            ids = details[0],
-            classes = details[1];
-
-          if(!globalPkg)
-            for(var j=0; j<classes.length; ++j) {
-              scope_def += "var " + ids[j] + "=" + this.path() + "." + includedPkgs[i] + "." + ids[j] + ";";
-            }
-          else
-            for(var j=0; j<classes.length; ++j) {
-              scope_def += "var " + ids[j] + "=" + includedPkgs[i] + "." + ids[j] + ";";
-            }
-        }
-        params = scope_def;
-
-        //extension = arguments[ arguments.length - 2 ];
         def = arguments[ arguments.length - 1 ];
+        params = buildScopeDef(pkgs);
       }
 
-      // if(typeof extension == "string" && def != undefined)
-      //   extension = this[extension];
-
-      // if we have an extension definition, but no definition,
-      // then we're using the two param version of class()
-      // if(extension && !def) {
-      //   def = extension;
-      //   extension = undefined;
-      // }
-
+      def = self.extend(self, params, Class, def);
       var id = def.name;
 
-      // if(extension)
-      //   def = self.extend(self, params, extension, def);
-      // else
-        def = self.extend(self, params, Class, def);
-
-      this[id] = def;
-      _classes[id] = def;
+      // Allow anonymous functions
+      if( id ) {
+        this[id] = def;
+        _classes[id] = def;
+      }
 
       // Now return the package -- this allows for classes to be chained
       return this;
@@ -140,21 +128,14 @@
       var _args = [],
         _scope = this;
 
+      // We do this because swapping arg vars actually overwrites the
+      // argument order, so this way we preserve everything
       for(var i=0; i<arguments.length; ++i){
         _args.push(arguments[i]);
       }
 
       // the last arg is actually the func object
       func = _args.pop();
-
-      // var extend = function(clss, def) {
-      //   self.extend(this, clss, def);
-      // };
-      //
-      // var define = function(clss, def) {
-      //   debugger;
-      //   self.define.call(this, clss, def);
-      // };
 
       if(_args.length > 0) {
         // We can also pass in the scope
@@ -164,28 +145,34 @@
         var scope_def = "";
         for(var i=0; i<_args.length; ++i) {
           var currPkg = package(_args[i]),
-            details = currPkg.getClasses(),
-            ids = details[0],
-            classes = details[1];
+            globalPkg = oo.package(_args[i]),
+            details,
+            ids,
+            classes,
+            pkgHeader = "$package.";
+
+          if(!currPkg && globalPkg) {
+            currPkg = globalPkg;
+            pkgHeader = "";
+          } else
+            throw new RuntimeError("package " + _args[i] + " cannot be found in the global or local scopes");
+
+          details = currPkg.getClasses(),
+          ids = details[0],
+          classes = details[1];
 
           for(var j=0; j<classes.length; ++j) {
-            scope_def += "var " + ids[j] + "=$package." + _args[i] + "." + ids[j] + ";";
+            scope_def += "var " + ids[j] + "=" + pkgHeader + _args[i] + "." + ids[j] + ";";
           }
         }
 
         // Create the scope
-        // scope_def = "function(){" + scope_def + " return " + func.toString() + "}";
-        // eval(scope_def);
         var scopeFunc = "function(scope, func) {" +
-          // "var extend = " + extend.toString() + ";" +
-          // "var define = " + define.toString() + ";" +
           "eval(scope);" +
           "return eval('(' + func.toString() + ')').call(this);" +
         "}";
 
         return eval( "(" + scopeFunc + ")").call(this, scope_def, func)
-        // return func.apply(this);
-        // return eval("(" + scope_def + ")()").apply(currPkg);
       } else {
         // Now execute the function!
         return func.apply(this);
@@ -201,15 +188,42 @@
       var scope = this,
         params = "";
 
-      if( arguments.length == 4) {
-        scope = arguments[0];
-        params = arguments[1];
-        clss = arguments[2];
-        def = arguments[3];
-      } else if(arguments.length == 3) {
-        scope = arguments[0];
-        clss = arguments[1];
-        def = arguments[2];
+      if( arguments.length < 2)
+        throw new RuntimeError("extend takes at least two arguments: the class to extend and the definition");
+      else {
+        // We're dealing with a definition
+        if( arguments[arguments.length - 2] == Class ){
+          if( arguments.length == 4) {
+            var args = [arguments[0], arguments[1], arguments[2], arguments[3]];
+
+            scope = args[0];
+            params = args[1];
+            clss = args[2];
+            def = args[3];
+          } else if(arguments.length == 3) {
+            var args = [arguments[0], arguments[1], arguments[2]];
+
+            scope = args[0];
+            clss = args[1];
+            def = args[2];
+          }
+        // Okay, so it isn't a definition, it's an extension
+        } else {
+          var pkgs = [];
+
+          // Are we including other packages in this definition scope?
+          if(arguments.length > 2) {
+            // Don't include the last one, that's the defintion
+            for(var i=0; i < arguments.length - 2; ++i) {
+              pkgs.push(arguments[i]);
+            }
+
+            params = buildScopeDef(pkgs);
+          }
+
+          clss = arguments[ arguments.length - 2 ];
+          def = arguments[ arguments.length - 1 ];
+        }
       }
 
       var start = clss.toString(),
@@ -285,6 +299,8 @@
       // Now remove the header, create the local self scope,
       // setup the automated functions
       tail = "function(){ var self=this;"
+        + "self.package=" + $package.path() + ";"
+        + "self.className=\"" + (def.name || null) + "\";"
         + "var _read=" + _read.toString() + ";"
         + "var _write=" + _write.toString() + ";"
         + "var r=" + read.toString() + ";"
@@ -343,7 +359,14 @@
       var assembledScope = start + "\n" + tail + ").apply(this);";
 
       // perform the voodoo and regenerate the class with the proper scope
-      return this[def.name] = eval.call(this, "(" + assembledScope + "})");
+      this[def.name] = eval.call(this, "(" + assembledScope + "})");
+
+      // Allow anonymous functions
+      if( def.name ) {
+        _classes[def.name] = this[def.name];
+      }
+
+      return this[def.name];
     };
 
   };
@@ -489,13 +512,11 @@
           classes = details[1];
 
         for(var j=0; j<classes.length; ++j) {
-          scope_def += "var " + ids[j] + "= " + _args[i] + "." + ids[j] + ";";
+          scope_def += "var " + ids[j] + "=" + _args[i] + "." + ids[j] + ";";
         }
       }
 
       // Create the scope
-      // scope_def = "function(){" + scope_def + " return " + func.toString() + "}";
-      // eval(scope_def);
       var scopeFunc = "function(scope, func) {" +
         "eval(scope);" +
         "return eval('(' + func.toString() + ')').call(this);" +
@@ -532,9 +553,23 @@ function AbstractCallError(message) {
   this.message = message,
   this.stack = (new Error()).stack;
 }
-
 AbstractCallError.prototype = new Error;
+
+function StubbedMethodError(message) {
+  this.name = "StubbedMethodError",
+  this.message = message,
+  this.stack = (new Error()).stack;
+}
+StubbedMethodError.prototype = new Error;
 
 abstract = function() {
   throw new AbstractCallError("Cannot execute abstract function");
+}
+
+stub = function() {
+  try {
+    throw new StubbedMethodError("Stubbed method called");
+  } catch(err) {
+    console.warn(err.message + ": " + err.stack);
+  }
 }
