@@ -54,8 +54,9 @@ This following is an example of a simple class declaration in the org.example.an
 ```javascript
 package("org.example.animal", function(){
   
-  /// Animal provides a basic framework for other
-  /// critter types
+  /** 
+   * Animal provides a basic framework for other critter types
+   */
   define(function Animal(name){
     // Private scope!
     var type,
@@ -89,8 +90,9 @@ Inherit allows for the internal scope of a class to be added to.
 ```javascript
 package("org.example.animal", function(){
   
-  /// Animal provides a basic framework for other
-  /// critter types
+  /** 
+   * Animal provides a basic framework for other critter types
+   */
   define(function Animal(name){
     var type,
       move;
@@ -109,7 +111,9 @@ package("org.example.animal", function(){
     
   });
   
-  /// Dog inherits Animal because a dog is an animal
+  /** 
+   * Dog inherits Animal because a dog is an animal
+   */
   inherit(
     self.Animal,
     function Dog(name) {
@@ -134,8 +138,9 @@ Extend chains the scope of def onto the class that is being extended.
 ```javascript
 package("org.example.animal", function(){
   
-  /// Animal provides a basic framework for other
-  /// critter types
+  /** 
+   * Animal provides a basic framework for other critter types
+   */
   define(function Animal(name){
     var type,
       move;
@@ -154,7 +159,9 @@ package("org.example.animal", function(){
     
   });
 
-  /// Dog inherits Animal because a dog is an animal
+  /** 
+   * Dog inherits Animal because a dog is an animal
+   */
   inherit(
     self.Animal,
     function Dog(name) {
@@ -168,7 +175,10 @@ package("org.example.animal", function(){
       
     });
   
-  /// Bloodhound extends Dog because a bloodhound is a dog
+  /**
+   * Bloodhound extends Dog because a bloodhound is a dog, but does
+   * not need to change anything other than the public interface.
+   */
   extend(
     self.Dog,
     function Bloodhound(name) {
