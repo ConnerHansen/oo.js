@@ -1,7 +1,14 @@
 # oo.js
-Yet another object oriented JS library. This implementation of Object Oriented design in JavaScript is meant to be an experiment, and as such is not intended for production usage yet. The underlying goal of oo.js is to allow package and class access/construction that more closely resembles a "classical" OO structure. The main oo.js script exposes a handful of functions to help achieve this.
+Yet another object oriented JS library. This implementation of Object Oriented design in JavaScript is meant to be an experiment, and as such is not intended for production usage yet. The underlying goal of oo.js is to allow package and class access/construction that more closely resembles a "classical" OO structure. This means that classes and packages are created in isolated scopes, and using them (via a require() call) is also isolated within its own scope. The main oo.js script exposes a handful of functions to help achieve this.
 
 ### Changelog
+---
+**5/6/15**
+- Classes are now fully setlf and package aware (self.className, self.package)
+- Added support for function stubbing to help with development. Stubs issue a warning, but otherwise do not fail. This can be contrasted with an abstract function that will error out if called.
+- Added new example in examples/dom_elements. This example provides a super basic set of HTML dom classes and an example of their usage to build a super simple blogging like page with a navbar.
+- Added full support for the define and extend functions to take arbitrarily many packages in its call so that you no longer have to invoke an internal requires() call.
+
 ---
 **4/25/15**
 - Added support for getter/setter generation within class definitions
@@ -104,7 +111,7 @@ package("org.example.animal", function(){
   
   /// Dog inherits Animal because a dog is an animal
   inherit(
-    this.Animal,
+    self.Animal,
     function Dog(name) {
       move = "walk";
       speak = "bark!";
@@ -149,7 +156,7 @@ package("org.example.animal", function(){
 
   /// Dog inherits Animal because a dog is an animal
   inherit(
-    this.Animal,
+    self.Animal,
     function Dog(name) {
       move = "walk";
       speak = "bark!";
@@ -163,7 +170,7 @@ package("org.example.animal", function(){
   
   /// Bloodhound extends Dog because a bloodhound is a dog
   extend(
-    this.Dog,
+    self.Dog,
     function Bloodhound(name) {
       
       self.hunt = function() {
