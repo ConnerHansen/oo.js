@@ -44,7 +44,7 @@ Inheritance can be thought of as meaning "I am _x_, but with fundamental differe
 
 ![Blergh vs Blargh](https://raw.githubusercontent.com/ConnerHansen/oo.js/master/oo.js%20philosophy.png)
 
-In the extension block, we can see that the root scope and added scope are isolated from each other. They share the protected ($this) and public (this) scopes for the class, but do not share the private scope. In the inheritance block, we can see that the root scope and added scope are ultimately merged together. They share all three scopes: public (this), protected ($this), and private (var and function definitions). 
+In the extension block, we can see that the root scope and added scope are isolated from each other. They share the protected ($this) and public (this) scopes for the class, but do not share the private scope. In the inheritance block, we can see that the root scope and added scope are ultimately merged together. They share all three scopes: public (this), protected ($this), and private (var and function definitions).
 
 ## package
 The package function provides a simple way to declare/access a package and its classes. We also provide internal class, extend, and inherit functions for convenience in order to maintain package scopes.
@@ -53,29 +53,33 @@ The package function provides a simple way to declare/access a package and its c
 This following is an example of a simple class declaration in the org.example.animal package.
 ```javascript
 package("org.example.animal", function(){
-  
-  /** 
+
+  /**
    * Animal provides a basic framework for other critter types
    */
   define(function Animal(name){
     // Private scope!
     var type,
       move;
-    
+
+    // Protected scope!
+    $self.someProtectedVariable = "this is protected and not public!"
+
+    // Public scope!
     self.move = function() {
       console.log(move);
     };
-    
+
     self.speak = function() {
       console.log(speak);
     };
-    
+
     self.identify = function() {
       console.log("I'm " + name + " and I'm a(n) " + type);
     };
-    
+
   });
-  
+
 });
 ```
 This will result in the org.example.animal package being created if it doesn't already exist and the Animal class being added to that package. If you were to want to access the Animal class, you can easily do so either via a *require* call or directly from the global scope:
@@ -89,30 +93,31 @@ Inherit allows for the internal scope of a class to be added to.
 ### Example
 ```javascript
 package("org.example.animal", function(){
-  
-  /** 
+
+  /**
    * Animal provides a basic framework for other critter types
    */
   define(function Animal(name){
     var type,
       move;
-    
+
     self.move = function() {
       console.log(move);
     };
-    
+
     self.speak = function() {
       console.log(speak);
     };
-    
+
     self.identify = function() {
       console.log("I'm " + name + " and I'm a(n) " + type);
     };
-    
+
   });
-  
-  /** 
-   * Dog inherits Animal because a dog is an animal
+
+  /**
+   * Dog inherits Animal because a dog is an animal and
+   * must alter some private compoents of Animal
    */
   inherit(
     self.Animal,
@@ -120,16 +125,16 @@ package("org.example.animal", function(){
       move = "walk";
       speak = "bark!";
       type = "dog";
-      
+
       self.wag = function() {
         console.log("*tail wagging intensifies*");
       };
-      
+
     });
-    
+
 });
 ```
-Dog will now be defined alongside Animal. Dog additionally will have an extra method (dog.wag) that Animal does not. Additionally, even though Dog augments the scope of Animal directly (note how move, speak, and type were never declared within Dog! They don't need to be, they were declared in Animal! :D) Animal itself remains unchanged. 
+Dog will now be defined alongside Animal. Dog additionally will have an extra method (dog.wag) that Animal does not. Additionally, even though Dog augments the scope of Animal directly (note how move, speak, and type were never declared within Dog! They don't need to be, they were declared in Animal! :D) Animal itself remains unchanged.
 
 ## extend
 Extend chains the scope of def onto the class that is being extended.
@@ -137,30 +142,31 @@ Extend chains the scope of def onto the class that is being extended.
 ### Example
 ```javascript
 package("org.example.animal", function(){
-  
-  /** 
+
+  /**
    * Animal provides a basic framework for other critter types
    */
   define(function Animal(name){
     var type,
       move;
-    
+
     self.move = function() {
       console.log(move);
     };
-    
+
     self.speak = function() {
       console.log(speak);
     };
-    
+
     self.identify = function() {
       console.log("I'm " + name + " and I'm a(n) " + type);
     };
-    
+
   });
 
-  /** 
-   * Dog inherits Animal because a dog is an animal
+  /**
+   * Dog inherits Animal because a dog is an animal and
+   * must alter some private compoents of Animal
    */
   inherit(
     self.Animal,
@@ -168,13 +174,13 @@ package("org.example.animal", function(){
       move = "walk";
       speak = "bark!";
       type = "dog";
-      
+
       self.wag = function() {
         console.log("*tail wagging intensifies*");
       };
-      
+
     });
-  
+
   /**
    * Bloodhound extends Dog because a bloodhound is a dog, but does
    * not need to change anything other than the public interface.
@@ -182,19 +188,19 @@ package("org.example.animal", function(){
   extend(
     self.Dog,
     function Bloodhound(name) {
-      
+
       self.hunt = function() {
         console.log("Imma huntin!");
       };
-      
+
     });
-  
+
 });
 ```
 Here Bloodhound extends Dog. Bloodhound doesn't need to override the internals of Dog, but it does add to Dog. Bloodhound has all of the variable values that Dog has, but with the added method hunt() as well.
 
 ## Class Chaining Declaration
-Classes can also be tacked on after the package declaration. 
+Classes can also be tacked on after the package declaration.
 
 ```javascript
 package("oo.statechart.state")
