@@ -270,7 +270,7 @@ package( "core.statechart", function() {
           }
 
           self.fire = function(event, data) {
-            var ret = from;
+            var ret = null;
 
             if(self.test(event, data)) {
               ret = step(event, data);
@@ -381,13 +381,17 @@ package( "core.statechart", function() {
               var activeTransitions = root.getOutgoing(),
                 step = microsteps.shift();
 
+              // Does anything respond to the event?
               var t = activeTransitions[step.getEvent()];
               if(t) {
-                if(t.test(step.getEvent(), step.getData())) {
-                  root.setCurrent(t.fire(step.getEvent(), step.getData()));
 
-                  if(typeof root.getCurrent() == "CompositeState") {
+                // When we try to fire the transition, do we get anything?
+                var state = t.fire(step.getEvent(), step.getData());
+                if( state ) {
+                  root.setCurrent(state);
 
+                  if( typeof root.getCurrent() == "CompositeState" ) {
+                    console.log("TODO: add support for composite states");
                   }
                 }
               }
@@ -408,7 +412,7 @@ package( "core.statechart", function() {
           var event;
 
           // Check to see if we're looking at an event
-          // TODO: add ability to see inheirtance chain
+          // TODO: add ability to see inheritance chain
           if(evt && evt.getEvent != undefined && evt.getData != undefined)
             event = evt;
           else
