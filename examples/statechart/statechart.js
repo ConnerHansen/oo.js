@@ -5,46 +5,35 @@
 package( "core.statechart.events", function() {
 
   /**
-   * Defines the base StatechartEvent object. The ScEvent is a wrapper for
+   * Defines the base StatechartEvent object. The StatechartEvent is a wrapper for
    * an event and some data
    *
    * @param event - the trigger that should be fired
    * @param data - the event data to pass into the statechart
    */
   define(
-    function ScEvent(event, data){
-      var _event = event,
-        _data = data;
+    function StatechartEvent(_event, _data){
+      var event = _event,
+        data = _data;
 
-      self.getData = function() {
-        return _data;
-      };
-
-      self.getEvent = function() {
-        return _event;
-      };
-
-      self.setData = function(data) {
-        _data = data;
-      };
-
-      self.setEvent = function(event) {
-        _event = event;
-      };
+      rw("data", "event");
   });
 
   /**
    * Provides a wrapper for mouse events. Maps generic mouse event data to
    * events usable by the statechart
    *
-   * Extends ScEvent
+   * Extends StatechartEvent
    */
   extend(
-    self.ScEvent,
-    function MouseEvent(event, data) {
+    self.StatechartEvent,
+    function MouseEvent(_event, _data) {
       var button,
         type,
-        eventString;
+        eventString,
+        trigger;
+
+      rw("trigger");
 
       function getButton() {
         var which = "",
@@ -77,20 +66,24 @@ package( "core.statechart.events", function() {
           return "";
       };
 
-      self.trigger = function() {
-        var event = self.getEvent();
+      var _setData = self.setData;
+      self.setData = function(_data) {
+        debugger;
+        _setData(_data);
 
-        if(event)
-          return getButton() + "_" + getEventType();
+        if(_data)
+          trigger = getButton() + getEventType();
         else
-          return undefined;
+          trigger = undefined;
+
+        self.setEvent(trigger);
       };
 
       ////////////////////////////////////
       // Constructor
       ////////////////////////////////////
-      self.setData(data);
-      self.setEvent(event);
+      self.setData(_data);
+      // self.setEvent(_event);
     });
 
 });
@@ -109,37 +102,33 @@ package( "core.statechart", function() {
     define(
       function BasicState(name){
 
-        var incomingPaths = {},
-          outgoingPaths = {};
+        var incoming = {},
+          outgoing = {},
+          statechart;
+
+        r("incoming", "outgoing");
+        rw("statechart", "name");
 
         self.name = name;
 
         self.addIncoming = function(path) {
-          incomingPaths[path.events[0]] = path;
+          incoming[path.events[0]] = path;
         };
 
         self.addOutgoing = function(path) {
-          outgoingPaths[path.events[0]] = path;
+          outgoing[path.events[0]] = path;
         };
 
+        // Do nothing by default
         self.enter = function(event, data){};
-
         self.exit = function(event, data){};
 
-        self.getIncoming = function() {
-          return incomingPaths;
-        };
-
-        self.getOutgoing = function() {
-          return outgoingPaths;
-        };
-
         self.removeIncoming = function(state) {
-          delete incomingPaths[state.name];
+          delete incoming[state.name];
         };
 
         self.removeOutgoing = function(state) {
-          delete outgoingPaths[state.name];
+          delete outgoing[state.name];
         };
 
       });
@@ -158,6 +147,23 @@ package( "core.statechart", function() {
           initialState,
           currentState;
 
+        function mergeKeys(left, right) {
+          var hash = {},
+            lKeys = Object.keys(left),
+            rKeys = Object.keys(right);
+
+          for(var i=0; i<lKeys.length; ++i) {
+            hash[lKeys[i]] = left[lKeys[i]];
+          }
+
+          for(var i=0; i<rKeys.length; ++i) {
+            hash[rKeys[i]] = right[rKeys[i]];
+          }
+
+          return hash;
+        }
+
+        //// Public
         self.addState = function(state) {
           states[state.id] = state;
         };
@@ -169,6 +175,17 @@ package( "core.statechart", function() {
         self.getInitial = function() {
           return initialState;
         }
+
+        // Shadow the basic state's getOutgoing function
+        var _getOutgoing = self.getOutgoing;
+        self.getOutgoing = function() {
+          var outgoing = _getOutgoing();
+
+          if(currentState)
+            return mergeKeys(outgoing, currentState.getOutgoing());
+          else
+            return outgoing;
+        };
 
         self.removeState = function(state) {
           return delete states[state.id];
@@ -223,12 +240,11 @@ package( "core.statechart", function() {
       /**
        * Connect two states together.
        *
-       * TODO: events should be a JSON object
        * @param events - an array of events that this transition responds to
        * @param from - where are we coming from?
        * @param to - where are we going to?
-       * @triggers - an array of triggers to fire after this transition has stepped
-       * @guard - the guard condition on this transition
+       * @param triggers - an array of triggers to fire after this transition has stepped
+       * @param guard - the guard function on this transition
        */
       define(
         function Transition(events, from, to, triggers, guard){
@@ -341,6 +357,7 @@ package( "core.statechart", function() {
      * @param name - the name of the statechart
      */
     define(
+      "core.statechart.events",
       "core.statechart.state",
       "core.statechart.transition",
       function Statechart(name) {
@@ -350,8 +367,7 @@ package( "core.statechart", function() {
         var current,
           macrosteps = [],
           microsteps = [],
-          // TODO: core.statechart should be local...
-          // Local require?
+          defaultStep = new MouseEvent(undefined, undefined),
           root = new CompositeState("_root"),
           running = false;
 
@@ -362,13 +378,18 @@ package( "core.statechart", function() {
             running = true;
 
             while(microsteps.length > 0) {
-              var activeTransitions = root.getCurrent().getOutgoing(),
+              var activeTransitions = root.getOutgoing(),
                 step = microsteps.shift();
 
-              var t = activeTransitions[step.getEvent()];
+              var t = activeTransitions[step.getTrigger()];
               if(t) {
-                if(t.test(step.getEvent(), step.getData()))
+                if(t.test(step.getEvent(), step.getData())) {
                   root.setCurrent(t.fire(step.getEvent(), step.getData()));
+
+                  if(typeof root.getCurrent() == "CompositeState") {
+
+                  }
+                }
               }
             }
 
@@ -384,7 +405,14 @@ package( "core.statechart", function() {
         };
 
         self.fire = function(evt, data) {
-          var event = new core.statechart.events.MouseEvent(evt, data);
+          var event;
+
+          // Check to see if we're looking at an event
+          // TODO: add ability to see inheirtance chain
+          if(evt && evt.getEvent != undefined && evt.getData != undefined)
+            event = evt;
+          else
+            event = new StatechartEvent(evt, data);
 
           macrosteps.push(event);
           if(!running) {
@@ -393,7 +421,7 @@ package( "core.statechart", function() {
               fireMicro(step);
             }
 
-            fireMicro(new core.statechart.events.MouseEvent(undefined, undefined));
+            fireMicro(defaultStep);
           }
         };
 

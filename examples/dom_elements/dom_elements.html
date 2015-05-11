@@ -14,16 +14,54 @@
     "org.ui.toolkit",
     "org.html.dom",
     function() {
+
+      function createList() {
+        var list = new UnorderedList(),
+          item = new ListItem();
+
+        item.setContent( "This is <i>my</i> test");
+        list.appendChild(item);
+
+        item = new ListItem();
+        item.setContent( "Nope" );
+        list.appendChild(item);
+
+        item = new ListItem();
+        item.setContent( "Hey, another example!" );
+        list.appendChild(item);
+
+        return list;
+      }
+
+      function postEntry(id, header, content, footer) {
+        var panel = new Panel();
+
+        panel.setId(id);
+        panel.setHeader(header);
+
+        if(typeof content == "string")
+          panel.setContent(content);
+        else if(content)
+          panel.appendContent(content);
+
+        panel.setFooter(footer);
+
+        if( !footer )
+          panel.hideFooter();
+
+        panel.addCss("row spacer");
+
+        return panel;
+      }
+
       var navbar = new NavigationBar(),
         body = new Body(),
-        panel1 = new Panel(),
-        panel2 = new Panel(),
-        panel3 = new Panel(),
         content = new Div(),
         leftColumn = new Div(),
         centerColumn = new Div(),
         rightColumn = new Div(),
-        row = new Div();
+        row = new Div(),
+        list = createList();
 
       content.setCss("body-with-navbar row");
       leftColumn.setCss("quarter");
@@ -31,13 +69,11 @@
       centerColumn.setCss("half");
 
       // centerColumn.setStyle("padding: 5px;");
-      panel1.setHeader("This is my test");
-      panel1.setContent("This is my content body!");
-      panel1.addCss("row spacer");
-      panel1.setFooter("blurgh!");
 
-      panel2.setHeader("Some Update - May 4, 2015");
-      panel2.setContent(
+      centerColumn.appendChild(
+        postEntry( "panel1", "This is my test", "This is my content body!", "blurgh"));
+      centerColumn.appendChild(
+        postEntry( "panel2", "Some Update - May 4, 2015",
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam venenatis scelerisque rhoncus. Vestibulum sem ligula, blandit sit amet volutpat at, fringilla mattis quam. Proin hendrerit velit nec magna vulputate, et malesuada ligula mattis. Morbi leo leo, laoreet sit amet odio vel, accumsan finibus lacus. Quisque finibus a magna ac cursus. Quisque congue dignissim ullamcorper. Quisque ante sapien, tristique vel augue sed, venenatis pellentesque sem. Proin maximus dolor in pharetra bibendum." +
         "<br /><br />" +
         "Nulla vulputate odio nec libero consequat eleifend. Vivamus malesuada nibh ex, in volutpat nulla efficitur eget. Donec nec nisi et erat semper ultricies. Proin accumsan, nunc quis ullamcorper pulvinar, diam orci semper orci, a porttitor libero erat ac libero. Curabitur volutpat ex in nunc placerat mattis. Aenean vel massa ut felis feugiat elementum lacinia a purus. Vivamus rutrum vehicula mauris. Integer pretium ligula in mi volutpat faucibus. Nunc sodales efficitur tristique. Sed at orci arcu. Proin aliquet facilisis risus quis euismod. Nullam rhoncus lorem aliquet, suscipit diam et, elementum felis. Aenean eget euismod nibh." +
@@ -46,39 +82,26 @@
         "<br /><br />" +
         "Duis a posuere ligula. Maecenas pulvinar in massa id semper. Nulla sodales risus vel ligula malesuada, ullamcorper porttitor justo efficitur. Cras nec dolor at leo tristique tristique quis sed massa. Sed cursus commodo tempus. Quisque cursus lacinia elit, eget faucibus tellus rutrum nec. Nunc eget augue sed turpis ornare laoreet. Cras id scelerisque nisi." +
         "<br /><br />" +
-        "In vehicula turpis quis nisi placerat, a venenatis lacus pretium. Sed malesuada blandit enim quis tristique. Nam a imperdiet leo. Nullam ac efficitur mi. Fusce sed est ut arcu pretium molestie vel at lacus. Vestibulum enim est, sagittis id hendrerit quis, porta eget neque. Praesent viverra blandit faucibus."
-        );
-      panel2.hideFooter();
-      panel2.addCss("row spacer");
-
-      panel3.setHeader("Initial Post - May 1, 2015");
-
-      var list = new UnorderedList(),
-        item = new ListItem();
-
-      item.setContent( "This is <i>my</i> test");
-      list.appendChild(item);
-
-      item = new ListItem();
-      item.setContent( "Nope" );
-      list.appendChild(item);
-
-      item = new ListItem();
-      item.setContent( "Hey, another example!" );
-      list.appendChild(item);
-
-      panel3.appendContent(list);
-      panel3.addCss("row spacer");
-      panel3.setFooter("Copywrite ConnerDev 1900-20billion");
+        "In vehicula turpis quis nisi placerat, a venenatis lacus pretium. Sed malesuada blandit enim quis tristique. Nam a imperdiet leo. Nullam ac efficitur mi. Fusce sed est ut arcu pretium molestie vel at lacus. Vestibulum enim est, sagittis id hendrerit quis, porta eget neque. Praesent viverra blandit faucibus."));
+      centerColumn.appendChild(
+        postEntry( "panel3", "Hey, this is a post - May 3, 2015",
+        "<h3>Lorem ipsum</h3><hr /><br /> dolor sit amet, consectetur adipiscing elit. Etiam venenatis scelerisque rhoncus. Vestibulum sem ligula, blandit sit amet volutpat at, fringilla mattis quam. Proin hendrerit velit nec magna vulputate, et malesuada ligula mattis. Morbi leo leo, laoreet sit amet odio vel, accumsan finibus lacus. Quisque finibus a magna ac cursus. Quisque congue dignissim ullamcorper. Quisque ante sapien, tristique vel augue sed, venenatis pellentesque sem. Proin maximus dolor in pharetra bibendum." +
+        "<br /><br />" +
+        "Nulla vulputate odio nec libero consequat eleifend. Vivamus malesuada nibh ex, in volutpat nulla efficitur eget. Donec nec nisi et erat semper ultricies. Proin accumsan, nunc quis ullamcorper pulvinar, diam orci semper orci, a porttitor libero erat ac libero. Curabitur volutpat ex in nunc placerat mattis. Aenean vel massa ut felis feugiat elementum lacinia a purus. Vivamus rutrum vehicula mauris. Integer pretium ligula in mi volutpat faucibus. Nunc sodales efficitur tristique. Sed at orci arcu. Proin aliquet facilisis risus quis euismod. Nullam rhoncus lorem aliquet, suscipit diam et, elementum felis. Aenean eget euismod nibh." +
+        "<br /><br />" +
+        "Donec porta a ex pellentesque posuere. Aliquam neque urna, tincidunt quis posuere vel, ultricies at dolor. Sed in scelerisque tellus. Cras in turpis fermentum diam dapibus semper. Integer egestas, dolor ac ultrices rhoncus, arcu nulla semper mi, sit amet tincidunt libero dolor quis nulla. Phasellus turpis neque, feugiat a dignissim ac, feugiat sed sem. Curabitur laoreet egestas risus ac suscipit." +
+        "<br /><br />" +
+        "Duis a posuere ligula. Maecenas pulvinar in massa id semper. Nulla sodales risus vel ligula malesuada, ullamcorper porttitor justo efficitur. Cras nec dolor at leo tristique tristique quis sed massa. Sed cursus commodo tempus. Quisque cursus lacinia elit, eget faucibus tellus rutrum nec. Nunc eget augue sed turpis ornare laoreet. Cras id scelerisque nisi." +
+        "<br /><br />" +
+        "In vehicula turpis quis nisi placerat, a venenatis lacus pretium. Sed malesuada blandit enim quis tristique. Nam a imperdiet leo. Nullam ac efficitur mi. Fusce sed est ut arcu pretium molestie vel at lacus. Vestibulum enim est, sagittis id hendrerit quis, porta eget neque. Praesent viverra blandit faucibus."));
+      centerColumn.appendChild(
+        postEntry( "panel4", "Initial Post - May 1, 2015", list, "This is another footer :D"));
 
       content.appendChild(leftColumn);
       content.appendChild(centerColumn);
       content.appendChild(rightColumn);
 
       centerColumn.setStyle("padding: 25px 5px 5px 5px;");
-      centerColumn.appendChild(panel1);
-      centerColumn.appendChild(panel2);
-      centerColumn.appendChild(panel3);
 
       body.setStyle("margin: 0; padding: 0");
       body.appendChild(navbar.getContainer());

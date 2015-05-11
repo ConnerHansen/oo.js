@@ -55,27 +55,31 @@
         };
 
         body.addEventListener('mousemove', function(event) {
-          mouseEvent.setEvent("mousemove");
-          mouseEvent.setData(event);
-          sc.fire(mouseEvent.trigger(), event);
+          // mouseEvent.setData(event);
+          // sc.fire(mouseEvent);
+          sc.fire(
+            new MouseEvent("", event));
         });
 
         body.addEventListener('mousedown', function(event) {
-          mouseEvent.setEvent("mousedown");
-          mouseEvent.setData(event);
-          sc.fire(mouseEvent.trigger(), event);
+          // mouseEvent.setData(event);
+          sc.fire(
+            new MouseEvent("", event));
+          // sc.fire("", event);
         });
 
         body.addEventListener('mouseup', function(event) {
-          mouseEvent.setEvent("mouseup");
-          mouseEvent.setData(event);
-          sc.fire(mouseEvent.trigger(), event);
+          // mouseEvent.setData(event);
+          // sc.fire("", event);
+          sc.fire(
+            new MouseEvent("", event));
         });
 
         body.addEventListener('mousewheel', function(event) {
-          mouseEvent.setEvent("mousewheel");
-          mouseEvent.setData(event);
-          sc.fire(mouseEvent.trigger(), event);
+          // mouseEvent.setData(event);
+          // sc.fire(mouseEvent);
+          sc.fire(
+            new MouseEvent("", event));
         });
       }
 
@@ -92,31 +96,34 @@
 
         doneInitializing = new Transition(undefined, startState, waitState),
 
-        eventMouseFollow = new Transition("mouse_move", waitState, mouseFollow),
+        eventMouseFollow = new Transition("mousemove", waitState, mouseFollow),
         eventMouseFollowReturn = new Transition(undefined, mouseFollow, waitState),
 
-        eventMouseDown = new Transition("left_down", waitState, mouseDown),
-        eventMouseDragging = new Transition("left_move", mouseDown, mouseDragging),
-        eventMouseReleased = new Transition("left_up", mouseDown, waitState),
-        eventMouseContDragging = new Transition("left_move", mouseDragging, mouseDragging),
+        eventMouseDown = new Transition("leftdown", waitState, mouseDown),
+        eventMouseDragging = new Transition("leftmove", mouseDown, mouseDragging),
+        eventMouseReleased = new Transition("leftup", mouseDown, waitState),
+        eventMouseContDragging = new Transition("leftmove", mouseDragging, mouseDragging),
 
         mouseDiv = document.getElementById("mouse"),
 
-        eventMDReleased = new ActiveTransition("left_up", mouseDragging, waitState, null, null,
+        eventMDReleased = new ActiveTransition("leftup", mouseDragging, waitState, null, null,
           function(event, data){
             mouseDiv.style["left"] = data.x + "px";
             mouseDiv.style["top"] = data.y + "px";
           }),
 
-        eventMDReleased2 = new ActiveTransition("mouse_move", mouseDragging, waitState, null, null,
+        eventMDReleased2 = new ActiveTransition("mousemove", mouseDragging, waitState, null, null,
           function(event, data){
             mouseDiv.style["left"] = data.x + "px";
             mouseDiv.style["top"] = data.y + "px";
           });
 
-      setupListeners();
+      window.onload = setupListeners();
       sc.root().setInitial(startState);
+
+      debugger;
       sc.fire();
+      window.sc = sc;
     });
   </script>
 </html>

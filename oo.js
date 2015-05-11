@@ -4,18 +4,31 @@
   else
     oo = window;
 
-  Class = oo.Class || function() {var $self = {};};
+  oo.classToPackage = {};
 
-  Package = oo.Package || function( name ) {
+  Class = oo.Class || function Class() {
+    var $self = {},
+      self = this;
+
+    // TODO: add ability to check extension/inheritance path
+    // self.typeOf = function( clss ) {
+    //   // lookup or access?
+    //   if(clss)
+    //     ;
+    //   else
+    //     return
+    // };
+  };
+
+  Package = oo.Package || function Package( name ) {
     var define,
       extend,
       package,
       require,
       inherit,
       _classes = {},
-      self = this,
-      $pkg = this,
-      $package = this; // self, and $pkg are useless here
+      _deps = {},
+      self = this;
 
     function buildScopeDef(pkgs) {
       var scopeDef = "";
@@ -85,13 +98,14 @@
       }
 
       def = self.extend(self, params, Class, def);
-      var id = def.name;
-
+      // var id = def.name;
+      //
       // Allow anonymous functions
-      if( id ) {
-        this[id] = def;
-        _classes[id] = def;
-      }
+      // if( id ) {
+      //   this[id] = def;
+      //   _classes[id] = def;
+      //   oo.classToPackage[ def ] = self.path() + "." + id;
+      // }
 
       // Now return the package -- this allows for classes to be chained
       return this;
@@ -247,6 +261,7 @@
         _write.apply(self, arguments);
       };
 
+      // TODO: shift _read, _write to be global functions (oo.helpers.read?)
       var _read = function() {
         for(var i=0; i<arguments.length; ++i) {
           var varName = arguments[i]
@@ -257,11 +272,8 @@
           name = name.replace(/^[_$]/, "")
             .replace(name[0], name[0].toUpperCase());
 
-          self[ "get" + name ] = function(varName) {
-            return function() {
-              return eval( varName );
-            };
-          }(varName);
+          // now generate the new getter
+          self[ "get" + name ] = eval("(function(){return " + varName + "})");
         }
       };
 
@@ -275,20 +287,14 @@
           name = name.replace(/^[_$]/, "")
             .replace(name[0], name[0].toUpperCase());
 
-          self[ "set" + name ] = function(varName) {
-
-            return function(val) {
-              if(typeof val == "object")
-                val = JSON.stringify(val);
-              else if(typeof val == "string")
-                val = "\"" + val + "\"";
-
-              return eval(varName + "=" + val.toString() +  ";");
-            };
-          }(varName);
+          // now generate the new setter
+          self[ "set" + name ] = eval("(function(value){return " + varName + "=value})");
         }
       };
 
+      debugger;
+      // TODO: add super support. Extends must call super!
+      var supr = start;
       // Strip the header and footer from the extended scope
       start = start
         .replace(/^function[\w\s\(\),]+\{/, "")
@@ -299,8 +305,9 @@
       // Now remove the header, create the local self scope,
       // setup the automated functions
       tail = "function(){ var self=this;"
-        + "self.package=" + $package.path() + ";"
+        + "self.package=" + self.path() + ";"
         + "self.className=\"" + (def.name || null) + "\";"
+        // + "self.super=" + supr + ";"
         + "var _read=" + _read.toString() + ";"
         + "var _write=" + _write.toString() + ";"
         + "var r=" + read.toString() + ";"
@@ -315,10 +322,15 @@
       start = header + "\n" + start + "\n";
 
       // Now assemble the new scope!
-      var assembledScope = start + "\n(" + tail + ").apply(this);";
-      this[def.name] = eval.call(scope, "(" + assembledScope + "})");
-      _classes[def.name] = this[def.name];
-      return this[def.name]
+      var assembledScope = start + "\n(" + tail + ").apply(this);",
+        extendedFunc = eval.call(scope, "(" + assembledScope + "})");
+
+      if(extendedFunc.name) {
+        this[extendedFunc.name] = _classes[extendedFunc.name] = extendedFunc;
+        oo.classToPackage[ def ] = self.path() + "." + extendedFunc.name;
+      }
+
+      return extendedFunc;
       // return this[def.name] = eval.call(scope, "(" + assembledScope + "})");
     };
 
@@ -333,10 +345,22 @@
       }
 
       var start = clss.toString(),
-        tail = def.toString();
+        tail = def.toString(),
+        // Get the new function's header
+        header = tail.match(/^function[\w\s\(\),]+\{/)[0],
+        pkgs = [];
 
-      // Get the new function's header
-      var header = tail.match(/^function[\w\s\(\),]+\{/)[0];
+      // Are we including other packages in this inherit scope?
+      if(arguments.length > 2) {
+        // Don't include the last one, that's the defintion
+        for(var i=0; i < arguments.length - 2; ++i) {
+          pkgs.push(arguments[i]);
+        }
+
+        header += buildScopeDef(pkgs);
+        clss = arguments[ arguments.length-2 ];
+        def = arguments[ arguments.length-1 ];
+      }
 
       // Strip the header and footer from the extended scope
       start = start
@@ -359,14 +383,16 @@
       var assembledScope = start + "\n" + tail + ").apply(this);";
 
       // perform the voodoo and regenerate the class with the proper scope
-      this[def.name] = eval.call(this, "(" + assembledScope + "})");
+      var extendedFunc = eval.call(this, "(" + assembledScope + "})");
 
       // Allow anonymous functions
-      if( def.name ) {
-        _classes[def.name] = this[def.name];
+      if( extendedFunc.name ) {
+        this[extendedFunc.name] = extendedFunc;
+        _classes[extendedFunc.name] = this[extendedFunc.name];
+        oo.classToPackage[ extendedFunc.name ] = self.path() + "." + extendedFunc.name;
       }
 
-      return this[def.name];
+      return extendedFunc;
     };
 
   };
@@ -401,11 +427,6 @@
     // perform the voodoo and regenerate the class with the proper scope
     return eval("(" + assembledScope + "})");
   };
-
-  // TODO look into fixing this...
-  // oo.extend = function(clss, def) {
-  //
-  // };
 
   oo.package = function(id, func) {
     var currPkg = this,
