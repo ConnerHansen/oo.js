@@ -55,29 +55,21 @@
         };
 
         body.addEventListener('mousemove', function(event) {
-          // mouseEvent.setData(event);
-          // sc.fire(mouseEvent);
           sc.fire(
             new MouseEvent("", event));
         });
 
         body.addEventListener('mousedown', function(event) {
-          // mouseEvent.setData(event);
           sc.fire(
             new MouseEvent("", event));
-          // sc.fire("", event);
         });
 
         body.addEventListener('mouseup', function(event) {
-          // mouseEvent.setData(event);
-          // sc.fire("", event);
           sc.fire(
             new MouseEvent("", event));
         });
 
         body.addEventListener('mousewheel', function(event) {
-          // mouseEvent.setData(event);
-          // sc.fire(mouseEvent);
           sc.fire(
             new MouseEvent("", event));
         });
