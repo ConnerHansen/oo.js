@@ -381,7 +381,7 @@ package( "core.statechart", function() {
               var activeTransitions = root.getOutgoing(),
                 step = microsteps.shift();
 
-              var t = activeTransitions[step.getTrigger()];
+              var t = activeTransitions[step.getEvent()];
               if(t) {
                 if(t.test(step.getEvent(), step.getData())) {
                   root.setCurrent(t.fire(step.getEvent(), step.getData()));
