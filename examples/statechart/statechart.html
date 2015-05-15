@@ -87,10 +87,8 @@
         mouseFollowing = new BasicState("Mouse Following"),
 
         doneInitializing = new Transition(undefined, startState, waitState),
-
         eventMouseFollow = new Transition("mousemove", waitState, mouseFollow),
         eventMouseFollowReturn = new Transition(undefined, mouseFollow, waitState),
-
         eventMouseDown = new Transition("leftdown", waitState, mouseDown),
         eventMouseDragging = new Transition("leftmove", mouseDown, mouseDragging),
         eventMouseReleased = new Transition("leftup", mouseDown, waitState),

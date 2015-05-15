@@ -4,6 +4,8 @@
 //////////////////////////////////////////////////////////////
 package( "core.statechart.events", function() {
 
+  var somePackageVariable = 15;
+
   /**
    * Defines the base StatechartEvent object. The StatechartEvent is a wrapper for
    * an event and some data
@@ -34,6 +36,7 @@ package( "core.statechart.events", function() {
         trigger;
 
       rw("trigger");
+      self.super(_event, _data);
 
       function getButton() {
         var which = "",
@@ -68,7 +71,6 @@ package( "core.statechart.events", function() {
 
       var _setData = self.setData;
       self.setData = function(_data) {
-        debugger;
         _setData(_data);
 
         if(_data)
@@ -91,17 +93,16 @@ package( "core.statechart.events", function() {
 //////////////////////////////////////////////////////////////
 // Statecharts!
 //////////////////////////////////////////////////////////////
-require("core.statechart.events", function(){
+// require("core.statechart.events", function(){
 package( "core.statechart", function() {
-
   package("state", function() {
+    var anotherPackageVar = "blah!";
 
     /**
      * A base state, capable of enter and exit actions.
      */
     define(
       function BasicState(name){
-
         var incoming = {},
           outgoing = {},
           statechart;
@@ -109,7 +110,7 @@ package( "core.statechart", function() {
         r("incoming", "outgoing");
         rw("statechart", "name");
 
-        self.name = name;
+        // self.name = name;
 
         self.addIncoming = function(path) {
           incoming[path.events[0]] = path;
@@ -131,6 +132,7 @@ package( "core.statechart", function() {
           delete outgoing[state.name];
         };
 
+        self.setName(name);
       });
 
     /**
@@ -142,6 +144,7 @@ package( "core.statechart", function() {
     extend(
       self.BasicState,
       function CompositeState(name) {
+        self.super(name);
 
         var states = {},
           initialState,
@@ -214,6 +217,7 @@ package( "core.statechart", function() {
       extend(
         self.BasicState,
         function IfState(name) {
+          self.super(name);
 
           // Override BasicState's enter
           self.enter = function(event, data) {
@@ -249,9 +253,9 @@ package( "core.statechart", function() {
       define(
         function Transition(events, from, to, triggers, guard){
           ////////////////////////////////////
-          // Private
+          // Protected
           ////////////////////////////////////
-          function step(event, data) {
+          $self.step = function(event, data) {
             if(from)
               from.exit(event, data);
 
@@ -273,7 +277,7 @@ package( "core.statechart", function() {
             var ret = null;
 
             if(self.test(event, data)) {
-              ret = step(event, data);
+              ret = $self.step(event, data);
 
               if(triggers)
                 for(var i=0; i<triggers.length; ++i) {
@@ -325,13 +329,14 @@ package( "core.statechart", function() {
        * Transition that is capable of performing some action while transitioning
        * from one state to the next
        */
-      inherit(
+      extend(
         self.Transition,
         function ActiveTransition(events, from, to, triggers, guard, perform){
+          self.super(events, from, to, triggers, guard);
 
           // Directly override the internal scope of
           // version of step in Transition :O
-          function step(event, data) {
+          $self.step = function(event, data) {
             if(from)
               from.exit(event, data);
 
@@ -371,6 +376,9 @@ package( "core.statechart", function() {
           root = new CompositeState("_root"),
           running = false;
 
+        rw("current");
+        rw("name");
+
         function fireMicro(evt) {
           microsteps.push(evt);
 
@@ -389,6 +397,7 @@ package( "core.statechart", function() {
                 var state = t.fire(step.getEvent(), step.getData());
                 if( state ) {
                   root.setCurrent(state);
+                  self.setCurrent(state);
 
                   if( typeof root.getCurrent() == "CompositeState" ) {
                     console.log("TODO: add support for composite states");
@@ -435,5 +444,30 @@ package( "core.statechart", function() {
 
       });
 
+      // Private, anonymous class! Perfect for a singleton
+      var StatechartLoader = define(
+        "core.statechart.events",
+        "core.statechart.state",
+        "core.statechart.transition",
+        "core.statechart",
+        function() {
+
+          self.load = function(config) {
+            var statechart = new Statechart( config.name );
+
+            return statechart;
+          };
+
+        });
+
+      self.Loader = new StatechartLoader();
+
+      // define(
+      //   "core.statechart.events",
+      //   "core.statechart.state",
+      //   "core.statechart.transition",
+      //   "core.statechart",
+      //   function StatechartLoader
+
   }); // end of package
-}); // end of require
+// }); // end of require

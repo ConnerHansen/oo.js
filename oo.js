@@ -76,7 +76,7 @@
     // Create redirecting private variables. This allows for local calls within
     // class/package definitions (ie define rather than this.define)
     define = function(extension, def) {
-      self.define.apply(self, arguments);
+      return self.define.apply(self, arguments);
     };
 
     self.define = function(def) {
@@ -107,8 +107,8 @@
       //   oo.classToPackage[ def ] = self.path() + "." + id;
       // }
 
-      // Now return the package -- this allows for classes to be chained
-      return this;
+      // Return the definition...
+      return def;
     };
 
     // Create redirecting private variables. Wat.
@@ -243,6 +243,7 @@
       var start = clss.toString(),
         tail = def.toString();
 
+      start = "";
       // Get the new function's header
       var header = tail.match(/^function[\w\s\(\),]+\{/)[0];
 
@@ -264,57 +265,68 @@
       // TODO: shift _read, _write to be global functions (oo.helpers.read?)
       var _read = function() {
         for(var i=0; i<arguments.length; ++i) {
-          var varName = arguments[i]
-            name = varName;
+          var __vn = arguments[i],
+            __nm = __vn;
 
           // strip off any leading symbols
           // then make the leading character upper case
-          name = name.replace(/^[_$]/, "")
-            .replace(name[0], name[0].toUpperCase());
+          __nm = __nm.replace(/^[_$]/, "")
+            .replace(__nm[0], __nm[0].toUpperCase());
 
           // now generate the new getter
-          self[ "get" + name ] = eval("(function(){return " + varName + "})");
+          self[ "get" + __nm ] = eval("(function(){return " + __vn + "})");
         }
       };
 
       var _write = function() {
         for(var i=0; i<arguments.length; ++i) {
-          var varName = arguments[i]
-            name = varName;
+          var __vn = arguments[i],
+            __nm = __vn;
 
           // strip off any leading symbols
           // then make the leading character upper case
-          name = name.replace(/^[_$]/, "")
-            .replace(name[0], name[0].toUpperCase());
+          __nm = __nm.replace(/^[_$]/, "")
+            .replace(__nm[0], __nm[0].toUpperCase());
 
           // now generate the new setter
-          self[ "set" + name ] = eval("(function(value){return " + varName + "=value})");
+          self[ "set" + __nm ] = eval("(function(value){return " + __vn + "=value})");
         }
       };
 
-      debugger;
       // TODO: add super support. Extends must call super!
-      var supr = start;
+      var supr = "";
+      if( oo.classToPackage[clss] && clss.name )
+        supr = "self.super=function(){" + oo.classToPackage[clss] +".apply(self, arguments);}";
       // Strip the header and footer from the extended scope
-      start = start
-        .replace(/^function[\w\s\(\),]+\{/, "")
-        .replace(/\}$/, "");
+      // start = start
+      //   .replace(/^function[\w\s\(\),]+\{/, "")
+      //   .replace(/\}$/, "");
 
       // TODO: this is where $pkg needs to be redefined...
+      var name = def.name;
+      if( name )
+        name = "\"" + def.name + "\"";
+      else
+        name = null;
 
       // Now remove the header, create the local self scope,
       // setup the automated functions
-      tail = "function(){ var self=this;"
+      tail = "var self=this;"
+        + "var $self=self.$||{};"
+        + "var inherited=false;"
+        + "if(self.$){inherited=true;}"
+        + "self.$ = $self;"
         + "self.package=" + self.path() + ";"
-        + "self.className=\"" + (def.name || null) + "\";"
-        // + "self.super=" + supr + ";"
+        + "self.className=" + name + ";"
+        + supr + ";"
         + "var _read=" + _read.toString() + ";"
         + "var _write=" + _write.toString() + ";"
         + "var r=" + read.toString() + ";"
         + "var w=" + write.toString() + ";"
         + "var rw=" + read_write.toString() + ";"
         + params
-        + tail.replace(header, "");
+        + tail.replace(header, "")
+          .replace(/\}$/, ";if(!inherited){delete self.$;}}");
 
       // Strip off the inherited class's function header and footer,
       // and replace with the new header
@@ -322,12 +334,12 @@
       start = header + "\n" + start + "\n";
 
       // Now assemble the new scope!
-      var assembledScope = start + "\n(" + tail + ").apply(this);",
-        extendedFunc = eval.call(scope, "(" + assembledScope + "})");
+      var assembledScope = start + "\n" + tail + "",
+        extendedFunc = eval.call(scope, "(" + assembledScope + ")");
 
       if(extendedFunc.name) {
         this[extendedFunc.name] = _classes[extendedFunc.name] = extendedFunc;
-        oo.classToPackage[ def ] = self.path() + "." + extendedFunc.name;
+        oo.classToPackage[ extendedFunc ] = self.path() + "." + extendedFunc.name;
       }
 
       return extendedFunc;
