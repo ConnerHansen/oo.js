@@ -3,6 +3,10 @@ Yet another object oriented JS library. This implementation of Object Oriented d
 
 ### Changelog
 ---
+**7/21/15**
+- Added static() in order to create methods on the prototype. Static is self aware, so using the self keyword is allowed
+
+---
 **5/6/15**
 - Classes are now fully setlf and package aware (self.className, self.package)
 - Added support for function stubbing to help with development. Stubs issue a warning, but otherwise do not fail. This can be contrasted with an abstract function that will error out if called.
