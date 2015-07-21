@@ -18,9 +18,8 @@ package( "org.html.dom", function() {
    * Basic HtmlElement wrapper
    */
   define(
-    function HtmlElement() {
+    function HtmlElement(domElement) {
       var id,
-        domElement,
         html,
         style,
         css;
@@ -62,6 +61,25 @@ package( "org.html.dom", function() {
         return null;
       };
 
+      /**
+       * Removes a child element from the current dom element
+       * @param  {DomElement} child the child dom element to remove
+       * @return {element}          the element that was removed, or false if
+       * the element was not present
+       */
+      self.removeChild = function(child) {
+        if( domElement ) {
+          var domChild = domElement.removeChild(child.getDomElement());
+          return domChild;
+        }
+
+        return false;
+      };
+
+      /**
+       * Strips off a CSS class if it's present
+       * @param  {string} oldCss the css class to remove
+       */
       self.removeCss = function(oldCss) {
         if(css)
           css = css.replace(oldCss, "");
@@ -124,17 +142,25 @@ package( "org.html.dom", function() {
   /**
    * Basic Div wrapper
    */
-  inherit(
+  extend(
     self.HtmlElement,
     function Div() {
-      domElement = document.createElement("div");
-
+      self.super(document.createElement("div"));
       self.events = self.package.events;
 
+      /**
+       * Registers an event on this div
+       * @param  {string}   event    event class to register
+       * @param  {Function} callback the callback function to use
+       */
       self.register = function(event, callback) {
         domElement["on" + event] = callback;
       };
 
+      /**
+       * Strips away an event listener
+       * @param  {string} event the event class to unregister
+       */
       self.unregister = function(event) {
         domElementp["on" + event] = undefined;
       };
@@ -143,12 +169,12 @@ package( "org.html.dom", function() {
   /**
    * Basic Input wrapper
    */
-  inherit(
+  extend(
     self.HtmlElement,
     function Input() {
       var type = self.package.inputs.TEXT;
       self.inputs = self.package.inputs;
-      domElement = document.createElement("input");
+      self.super(document.createElement("input"));
 
       r("type");
 
@@ -158,28 +184,28 @@ package( "org.html.dom", function() {
       };
     });
 
-  inherit(
+  extend(
     self.HtmlElement,
     function UnorderedList() {
-      domElement = document.createElement("ul");
+      self.super(document.createElement("ul"));
     });
 
-  inherit(
+  extend(
     self.HtmlElement,
     function OrderedList() {
-      domElement = document.createElement("ol");
+      self.super(document.createElement("ol"));
     });
 
-  inherit(
+  extend(
     self.HtmlElement,
     function ListItem() {
-      domElement = document.createElement("li");
+      self.super(document.createElement("li"));
     });
 
-  inherit(
+  extend(
     self.HtmlElement,
     function Body() {
-      domElement = document.body;
+      self.super(document.body);
 
       // Kill the unneeded methods
       self.setId = undefined;
@@ -207,6 +233,7 @@ package( "org.ui.toolkit", function() {
           scrollable = false,
           id;
 
+        self.super();
         r("container", "rightContainer", "leftContainer", "centerContainer");
 
         self.addButton = function(text, container, callback) {
@@ -222,6 +249,10 @@ package( "org.ui.toolkit", function() {
 
         self.isScrollable = function() {
           return scrollable;
+        };
+
+        self.render = function() {
+          return container.render();
         };
 
         self.setScrollable = stub;
@@ -240,6 +271,8 @@ package( "org.ui.toolkit", function() {
         container.appendChild(leftContainer);
         container.appendChild(centerContainer);
         container.appendChild(rightContainer);
+
+        self.getDomElement().appendChild(container.getDomElement());
       });
 
     /**
@@ -258,8 +291,7 @@ package( "org.ui.toolkit", function() {
           headerVisible = true;
 
         r("header", "content", "footer");
-
-        // self.super();
+        self.super();
 
         self.appendContent = function(child) {
           content.appendChild(child);

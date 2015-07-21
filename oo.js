@@ -5,6 +5,7 @@
     oo = window;
 
   oo.classToPackage = {};
+  oo.types = {};
 
   Class = oo.Class || function Class() {
     var $self = {},
@@ -34,9 +35,18 @@
       var scopeDef = "";
 
       for(var i=0; i<pkgs.length; ++i) {
-        var currPkg = package(pkgs[i]),
-          globalPkg = oo.package(pkgs[i]),
-          currPkg = currPkg || globalPkg,
+        var currPkg, globalPkg;
+
+        // We allow for string based or real package paths
+        if( typeof pkgs[i] == "string" ) {
+          currPkg = package(pkgs[i]);
+          globalPkg = oo.package(pkgs[i]);
+        } else {
+          currPkg = pkgs[i];
+          globalPkg = pkgs[i];
+        }
+
+        var currPkg = currPkg || globalPkg,
           details = currPkg.getClasses(),
           ids = details[0],
           classes = details[1];
@@ -47,7 +57,7 @@
           }
         else
           for(var j=0; j<classes.length; ++j) {
-            scopeDef += "var " + ids[j] + "=" + pkgs[i] + "." + ids[j] + ";";
+            scopeDef += "var " + ids[j] + "=" + currPkg.path() + "." + ids[j] + ";";
           }
       }
 
@@ -198,6 +208,20 @@
       self.extend.apply(self, arguments);
     };
 
+    self.instanceOf = function( clss ) {
+      if( clss ) {
+        return (clss && this.package[this.className] == clss) ? true : false;
+      } else
+        return this.package[ this.className ];
+    };
+
+    self.typeOf = function( clss ) {
+      if( clss )
+        return oo.typeOf(self, clss);
+      else
+        return oo.typeOf(self);
+    }
+
     self.extend = function(clss, def) {
       var scope = this,
         params = "";
@@ -240,6 +264,20 @@
         }
       }
 
+      if( typeof clss == "string" ) {
+        var match = self[ clss ];
+
+        if(!match) {
+          for(var i=0; i<pkgs.length; ++i) {
+            match = oo.package(pkgs[i])[ clss ] || match;
+          }
+        }
+
+        // If clss is null, then we should crash
+        clss = match;
+      }
+
+
       var start = clss.toString(),
         tail = def.toString();
 
@@ -263,6 +301,7 @@
       };
 
       // TODO: shift _read, _write to be global functions (oo.helpers.read?)
+      // FIXME: HOLY GOOD GOD PUSH THESE ONTO OO, STOP REDECLARING D:
       var _read = function() {
         for(var i=0; i<arguments.length; ++i) {
           var __vn = arguments[i],
@@ -293,16 +332,21 @@
         }
       };
 
-      // TODO: add super support. Extends must call super!
+      var _static = function(__func, __force) {
+        var name = __func.name;
+        if( !self.constructor.prototype[name] || __force ) {
+          var __func_str = __func.toString();
+          __func_str = __func_str.replace(/\{/, "{var self=this;");
+          self.constructor.prototype[name] = eval.call(window,"(" + __func_str + ")");
+        }
+        self[name] = function() {self.constructor.prototype[name].apply(self, arguments)};
+      };
+
       var supr = "";
       if( oo.classToPackage[clss] && clss.name )
-        supr = "self.super=function(){" + oo.classToPackage[clss] +".apply(self, arguments);}";
-      // Strip the header and footer from the extended scope
-      // start = start
-      //   .replace(/^function[\w\s\(\),]+\{/, "")
-      //   .replace(/\}$/, "");
+        supr = "self.super=function(){" + oo.classToPackage[clss] +".apply(self, arguments);self.className=\"" + def.name + "\"}";
 
-      // TODO: this is where $pkg needs to be redefined...
+      //
       var name = def.name;
       if( name )
         name = "\"" + def.name + "\"";
@@ -321,9 +365,12 @@
         + supr + ";"
         + "var _read=" + _read.toString() + ";"
         + "var _write=" + _write.toString() + ";"
+        + "self.instanceOf = " + self.instanceOf.toString() + ";"
+        + "self.typeOf = " + self.typeOf.toString() + ";"
         + "var r=" + read.toString() + ";"
         + "var w=" + write.toString() + ";"
         + "var rw=" + read_write.toString() + ";"
+        + "var static=" + _static.toString() + ";"
         + params
         + tail.replace(header, "")
           .replace(/\}$/, ";if(!inherited){delete self.$;}}");
@@ -340,7 +387,13 @@
       if(extendedFunc.name) {
         this[extendedFunc.name] = _classes[extendedFunc.name] = extendedFunc;
         oo.classToPackage[ extendedFunc ] = self.path() + "." + extendedFunc.name;
+
+        if( clss )
+          oo.types[ self.path() + "." + extendedFunc.name ] = clss;
+        else
+          oo.types[ self.path() + "." + extendedFunc.name ] = true;
       }
+
 
       return extendedFunc;
       // return this[def.name] = eval.call(scope, "(" + assembledScope + "})");
@@ -454,7 +507,6 @@
     if(typeof ids == "string")
       ids = ids.split(".");
 
-
     for(var i=0; i<ids.length; ++i) {
       var parent = currPkg;
 
@@ -473,6 +525,41 @@
     }
 
     return currPkg;
+  };
+
+  oo.instanceOf = function( clss, ext ) {
+    if( ext )
+      return clss.constructor == ext;
+    else {
+      return oo.types[ clss.constructor ];
+    }
+  };
+
+  oo.typeOf = function( clss, ext ) {
+    if( ext ) {
+      var arr;
+
+      if(typeof clss == "object") {
+        var parent = oo.typeOf( oo.instanceOf(clss) );
+        arr = [clss.constructor];
+
+        if( parent )
+          arr.concat( oo.typeOf( parent ));
+        // arr = [clss.constructor]oo.typeOf( oo.instanceOf(clss) );
+      } else
+        arr = oo.typeOf( clss );
+
+      return arr.indexOf( ext ) != -1;
+    } else {
+      var parent = oo.types[ clss ],
+        arr = [ clss ];
+
+      if(parent)
+        return arr.concat( oo.typeof( parent ));
+      else {
+        return arr;
+      }
+    }
   };
 
   oo.include = function(args, func) {
@@ -534,18 +621,22 @@
 
     if(_args.length > 0) {
       // We can also pass in the scope
-      if(typeof _args[0] == "object")
-        scope = _args.shift();
+      // if(typeof _args[0] == "object")
+      //   scope = _args.shift();
 
       var scope_def = "";
       for(var i=0; i<_args.length; ++i) {
-        var currPkg = package(_args[i]),
+        var currPkg = (typeof _args[i] == "string") ? package(_args[i]) : _args[i],
           details = currPkg.getClasses(),
           ids = details[0],
-          classes = details[1];
+          classes = details[1],
+          pkg = _args[i];
+
+        if(typeof pkg != "string")
+          pkg = pkg.path();
 
         for(var j=0; j<classes.length; ++j) {
-          scope_def += "var " + ids[j] + "=" + _args[i] + "." + ids[j] + ";";
+          scope_def += "var " + ids[j] + "=" + currPkg.path() + "." + ids[j] + ";";
         }
       }
 

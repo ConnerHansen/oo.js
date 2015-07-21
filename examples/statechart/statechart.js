@@ -4,8 +4,6 @@
 //////////////////////////////////////////////////////////////
 package( "core.statechart.events", function() {
 
-  var somePackageVariable = 15;
-
   /**
    * Defines the base StatechartEvent object. The StatechartEvent is a wrapper for
    * an event and some data
@@ -93,8 +91,10 @@ package( "core.statechart.events", function() {
 //////////////////////////////////////////////////////////////
 // Statecharts!
 //////////////////////////////////////////////////////////////
-// require("core.statechart.events", function(){
 package( "core.statechart", function() {
+  // All of the statecharts that are registered
+  self.statecharts = {};
+
   package("state", function() {
     var anotherPackageVar = "blah!";
 
@@ -149,6 +149,9 @@ package( "core.statechart", function() {
         var states = {},
           initialState,
           currentState;
+
+        // Read only
+        r("states");
 
         function mergeKeys(left, right) {
           var hash = {},
@@ -366,6 +369,10 @@ package( "core.statechart", function() {
       "core.statechart.state",
       "core.statechart.transition",
       function Statechart(name) {
+        // If we have a name, then register this statechart
+        if( name )
+          self.package.statecharts[name] = self;
+
         ////////////////////////////////////
         // Private
         ////////////////////////////////////
@@ -376,8 +383,7 @@ package( "core.statechart", function() {
           root = new CompositeState("_root"),
           running = false;
 
-        rw("current");
-        rw("name");
+        rw("name", "running", "root");
 
         function fireMicro(evt) {
           microsteps.push(evt);
@@ -397,10 +403,10 @@ package( "core.statechart", function() {
                 var state = t.fire(step.getEvent(), step.getData());
                 if( state ) {
                   root.setCurrent(state);
-                  self.setCurrent(state);
 
                   if( typeof root.getCurrent() == "CompositeState" ) {
-                    console.log("TODO: add support for composite states");
+                    if( window.log )
+                      log.todo("add support for composite states");
                   }
                 }
               }
@@ -413,7 +419,16 @@ package( "core.statechart", function() {
         ////////////////////////////////////
         // Pubic
         ////////////////////////////////////
-        self.current = function() {
+
+        /**
+         * Adds a state to the root statechart state
+         * @param  {State} state the state to add
+         */
+        self.addState = function(state) {
+          root.addState(state);
+        };
+
+        self.getCurrent = function() {
           return root.getCurrent();
         };
 
@@ -438,9 +453,9 @@ package( "core.statechart", function() {
           }
         };
 
-        self.root = function() {
-          return root;
-        };
+        self.setInitial = function(state) {
+          root.setInitial(state);
+        }
 
       });
 
@@ -462,12 +477,4 @@ package( "core.statechart", function() {
 
       self.Loader = new StatechartLoader();
 
-      // define(
-      //   "core.statechart.events",
-      //   "core.statechart.state",
-      //   "core.statechart.transition",
-      //   "core.statechart",
-      //   function StatechartLoader
-
   }); // end of package
-// }); // end of require
