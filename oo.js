@@ -390,12 +390,13 @@
         this[extendedFunc.name] = _classes[extendedFunc.name] = extendedFunc;
         oo.classToPackage[ extendedFunc ] = self.path() + "." + extendedFunc.name;
 
-        if( clss )
+        if( clss ) {
           oo.types[ self.path() + "." + extendedFunc.name ] = clss;
-        else
+          extendedFunc.prototype = Object.create(clss.prototype);
+          extendedFunc.prototype.constructor = extendedFunc;
+        } else
           oo.types[ self.path() + "." + extendedFunc.name ] = true;
       }
-
 
       return extendedFunc;
       // return this[def.name] = eval.call(scope, "(" + assembledScope + "})");
