@@ -6,6 +6,47 @@
 
   oo.classToPackage = {};
   oo.types = {};
+  oo._read = function() {
+    var self = this,
+      retStr = "";
+
+    for(var i=0; i<arguments.length; ++i) {
+      var __vn = arguments[i],
+        __nm = __vn;
+
+      // strip off any leading symbols
+      // then make the leading character upper case
+      __nm = __nm.replace(/^[_$]/, "")
+        .replace(__nm[0], __nm[0].toUpperCase());
+
+      // now generate the new getter
+      // self[ "get" + __nm ] = eval("(function(){return " + __vn + "})");
+      retStr += "(self['get" + __nm + "']=function(){return " + __vn + "});";
+    }
+
+    return retStr;
+  };
+
+  oo._write = function() {
+    var self = this,
+      retStr = "";
+
+    for(var i=0; i<arguments.length; ++i) {
+      var __vn = arguments[i],
+        __nm = __vn;
+
+      // strip off any leading symbols
+      // then make the leading character upper case
+      __nm = __nm.replace(/^[_$]/, "")
+        .replace(__nm[0], __nm[0].toUpperCase());
+
+      // now generate the new setter
+      // self[ "set" + __nm ] = eval("(function(value){return " + __vn + "=value})");
+      retStr += "(self['set" + __nm + "']=function(value){return " + __vn + "=value});";
+    }
+
+    return retStr;
+  };
 
   Class = oo.Class || function Class() {
     var $self = {},
@@ -287,50 +328,9 @@
 
       // Define our reader and writer -- move the _read and _write
       // functions to globals, this way we're not redefining so much
-      var read = function() {
-        _read.apply(self, arguments);
-      };
-
-      var write = function() {
-        _write.apply(self, arguments);
-      };
-
-      var read_write = function() {
-        _read.apply(self, arguments);
-        _write.apply(self, arguments);
-      };
-
-      // TODO: shift _read, _write to be global functions (oo.helpers.read?)
-      // FIXME: HOLY GOOD GOD PUSH THESE ONTO OO, STOP REDECLARING D:
-      var _read = function() {
-        for(var i=0; i<arguments.length; ++i) {
-          var __vn = arguments[i],
-            __nm = __vn;
-
-          // strip off any leading symbols
-          // then make the leading character upper case
-          __nm = __nm.replace(/^[_$]/, "")
-            .replace(__nm[0], __nm[0].toUpperCase());
-
-          // now generate the new getter
-          self[ "get" + __nm ] = eval("(function(){return " + __vn + "})");
-        }
-      };
-
-      var _write = function() {
-        for(var i=0; i<arguments.length; ++i) {
-          var __vn = arguments[i],
-            __nm = __vn;
-
-          // strip off any leading symbols
-          // then make the leading character upper case
-          __nm = __nm.replace(/^[_$]/, "")
-            .replace(__nm[0], __nm[0].toUpperCase());
-
-          // now generate the new setter
-          self[ "set" + __nm ] = eval("(function(value){return " + __vn + "=value})");
-        }
-      };
+      var read = function(){eval(oo._read.apply(self,arguments))};
+      var write = function(){eval(oo._write.apply(self, arguments))};
+      var read_write = function() {r.apply(self,arguments);w.apply(self, arguments);};
 
       var _static = function(__func, __force) {
         var name = __func.name;
@@ -360,13 +360,15 @@
         + "var inherited=false;"
         + "if(self.$){inherited=true;}"
         + "self.$ = $self;"
+        + "if(!inherited){"
         + "self.package=" + self.path() + ";"
         + "self.className=" + name + ";"
-        + supr + ";"
-        + "var _read=" + _read.toString() + ";"
-        + "var _write=" + _write.toString() + ";"
+        // + "var _read=" + _read.toString() + ";"
+        // + "var _write=" + _write.toString() + ";"
         + "self.instanceOf = " + self.instanceOf.toString() + ";"
         + "self.typeOf = " + self.typeOf.toString() + ";"
+        + "};"
+        + supr + ";"
         + "var r=" + read.toString() + ";"
         + "var w=" + write.toString() + ";"
         + "var rw=" + read_write.toString() + ";"
