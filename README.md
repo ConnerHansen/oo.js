@@ -1,6 +1,8 @@
 # oo.js
 Yet another object oriented JS library. This implementation of Object Oriented design in JavaScript is meant to be an experiment, and as such is not intended for production usage yet. The underlying goal of oo.js is to allow package and class access/construction that more closely resembles a "classical" OO structure. This means that classes and packages are created in isolated scopes, and using them (via a require() call) is also isolated within its own scope. The main oo.js script exposes a handful of functions to help achieve this.
 
+Please note, the readme is currently out of date! I am working to update it.
+
 ### Changelog
 ---
 **7/21/15**
