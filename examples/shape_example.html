@@ -23,22 +23,12 @@
        * Convenience class for locating a point
        */
       define(
-      function Point(_x, _y) {
-        var x = 0,
-          y = 0;
+      function Point(x, y) {
+        x = x || 0;
+        y = y || 0;
 
         // Create the getters and setters
         rw("x", "y");
-
-        //////////////////
-        // Constructor!
-        //////////////////
-
-        // Set the x and y coordinates if we have them
-        if(_x)
-          self.setX(_x);
-        if(_y)
-          self.setY(_y);
       });
 
     });
@@ -48,7 +38,7 @@
      * have a position, and an area
      */
     define(
-    "helper",
+    "org.example.helper",
     function Shape() {
       var position = new Point(),
         width = 0,
@@ -77,14 +67,16 @@
     });
 
     extend(
-      self.Shape,
-      function Box() {
+      "Shape",
+      function Box(_name) {
         var div = undefined,
           style = "",
           clss = undefined;
 
         r("div");
         rw("style");
+        self.super();
+        self.setName(_name);
 
         ///////////////////
         // Private
@@ -111,7 +103,7 @@
               div.setAttribute("class", clss);
             } else {
               div = document.createElement("div");
-              div.id = name
+              div.id = self.getName();
               div.setAttribute("style", assembleStyle());
               div.setAttribute("class", clss);
 
@@ -130,25 +122,25 @@
 
   // Now, we're going to draw two divs!
   require(
-  "org.example", function() {
-    // Global so you can play around with them!
-    b1 = new Box(),
-    b2 = new Box();
+    "org.example",
+    function() {
+      // Global so you can play around with them!
+      b1 = new Box("asdf"),
+      b2 = new Box("1234");
 
-    b1.setStyle("background-color: green; position: absolute; box-shadow: 5px 5px 10px rgba(0,0,0,0.25);");
-    b1.setX("100px");
-    b1.setY("50px");
-    b1.setWidth("50px");
-    b1.setHeight("25%");
-    b1.render();
+      b1.setStyle("background-color: green; position: absolute; box-shadow: 5px 5px 10px rgba(0,0,0,0.25);");
+      b1.setX("100px");
+      b1.setY("50px");
+      b1.setWidth("50px");
+      b1.setHeight("25%");
+      b1.render();
 
-    b2.setStyle("background-color: orange; position: absolute; border: 2px dotted black");
-    b2.setX("10px");
-    b2.setY("200px");
-    b2.setWidth("150px");
-    b2.setHeight("10px");
-    b2.render();
-
-  });
+      b2.setStyle("background-color: orange; position: absolute; border: 2px dotted black");
+      b2.setX("10px");
+      b2.setY("200px");
+      b2.setWidth("150px");
+      b2.setHeight("10px");
+      b2.render();
+    });
   </script>
 </html>
